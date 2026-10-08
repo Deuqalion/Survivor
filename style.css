@@ -1,0 +1,928 @@
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #010501;
+      color: #fff;
+      overflow-x: hidden;
+      transform: translateY(-7px);
+    }
+
+    /* =========================================
+       GÓRNY PANEL
+       ========================================= */
+
+
+    .btn {
+      border: 1px solid #5d755f;
+      background: linear-gradient(#344638, #222d24);
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        border-color 0.15s ease;
+    }
+
+    .btn:hover {
+      filter: brightness(1.15);
+      border-color: #8aa98d;
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      filter: none;
+      transform: none;
+    }
+
+    .btn-glowny {
+      background: linear-gradient(#55735a, #334634);
+      border-color: #8daf92;
+    }
+
+
+    .btn-walka {
+      background: linear-gradient(#734040, #462424);
+      border-color: #af8d8d;
+    }
+
+    /* =========================================
+       UKŁAD DWÓCH GRACZY
+       ========================================= */
+
+    .areny {
+  display: grid;
+  grid-template-columns: 1fr 300px 1fr;
+  align-items: start;
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 20px 20px;
+  column-gap: 5px;
+}
+
+.gracz-kolumna {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+    .gracz-naglowek {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .gracz-tytul {
+      font-size: 19px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 5px #000;
+    }
+
+    .gracz-1 .gracz-tytul { color: #7fc4ff; }
+    .gracz-2 .gracz-tytul { color: #ff8a8a; }
+
+    .gracz-przyciski {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* =========================================
+       PLANSZA / EKWIPUNEK
+       ========================================= */
+
+    .plansza {
+      --item-w: 142px;
+      --item-h: 167px;
+
+      width: calc((var(--item-w) * 5) + (10px * 4));
+      display: grid;
+      grid-template-columns: repeat(5, var(--item-w));
+      grid-auto-rows: var(--item-h);
+      gap: 0px;
+      flex-shrink: 0;
+      justify-content: center;
+      align-content: start;
+    }
+
+    .item {
+      width: var(--item-w);
+      height: var(--item-h);
+      position: relative;
+      cursor: pointer;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+
+    .item:hover {
+      transform: scale(1.03);
+      filter: brightness(1.1);
+      box-shadow: 0 0 15px rgba(220, 255, 220, 0.14);
+      z-index: 20;
+    }
+
+    .item img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .item-nazwa {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 5px;
+
+      text-align: center;
+      padding: 4px 6px;
+
+      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.68);
+
+      color: #e8e8e8;
+      font-size: 11px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+
+      pointer-events: none;
+    }
+
+    /* =========================================
+       ZABLOKOWANY ITEM (tryb Survivor)
+       ========================================= */
+
+    .item.zablokowany {
+      cursor: default;
+    }
+
+    .item.zablokowany img {
+      filter: grayscale(1) brightness(0.45);
+    }
+
+    .item.zablokowany:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .item-blokada {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1.4;
+      color: #cfcfcf;
+      text-shadow: 1px 1px 2px #000;
+
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 7px;
+      pointer-events: none;
+    }
+
+    /* =========================================
+       ZABLOKOWANY AFFIX (tryb Survivor, w tooltipie)
+       ========================================= */
+
+    .affix-zablokowany {
+      opacity: 0.5;
+    }
+
+    .affix-name-zablokowany {
+      color: #888;
+      font-style: italic;
+      font-size: 16px;
+    }
+
+    .item.primal img {
+      filter:
+        hue-rotate(-125deg)
+        saturate(1.8)
+        brightness(0.82)
+        drop-shadow(0 0 9px rgba(150, 10, 10, 0.7));
+    }
+
+    .btn-item {
+      position: absolute;
+      left: 50%;
+      bottom: -1px;
+      transform: translateX(-50%);
+
+      padding: 4px 9px;
+      font-size: 11px;
+      line-height: 1;
+
+      opacity: 0;
+      pointer-events: none;
+
+      background: rgba(15, 20, 15, 0.94);
+      border: 1px solid #6d886f;
+    }
+
+    .item:hover .btn-item {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .btn-item:hover {
+      transform: translateX(-50%) scale(1.06);
+    }
+
+    /* =========================================
+       KARTA STATYSTYK GRACZA
+       ========================================= */
+
+    .karta-staty {
+      width: calc((130px * 5) + (10px * 4));
+      background: rgba(10, 20, 10, 0.9);
+      border: 2px solid #385a3c;
+      border-radius: 10px;
+      padding: 12px 16px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+    }
+
+    .gracz-2 .karta-staty {
+      border-color: #5a3838;
+    }
+
+  /* =========================================
+   PORÓWNANIE STATYSTYK — ŚRODEK
+   ========================================= */
+
+.porownanie {
+  width: 300px;
+  flex-shrink: 0;
+  margin-top: 0px;
+
+  background: rgba(10, 20, 10, 0.92);
+  border: 2px solid #385a3c;
+  border-radius: 10px;
+
+  padding: 12px 0px;
+
+  box-shadow:
+    0 0 15px rgba(0, 0, 0, 0.6),
+    inset 0 0 20px rgba(50, 100, 50, 0.04);
+}
+
+.porownanie-naglowek {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+
+  font-size: 15px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.porownanie-naglowek span:first-child {
+  color: #7fc4ff;
+}
+
+.porownanie-naglowek span:last-child {
+  color: #ff8a8a;
+}
+
+.porownanie-naglowek strong {
+  color: #dfe9df;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.porownanie-wiersz {
+  display: grid;
+  grid-template-columns: 82px 1fr 82px;
+  align-items: center;
+
+  min-height: 31px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  font-size: 19px;
+}
+
+.porownanie-wiersz:last-child {
+  border-bottom: none;
+}
+
+.porownanie-lewa {
+  text-align: right;
+  padding-right: 8px;
+
+  color: #7fc4ff;
+  font-weight: bold;
+}
+
+.porownanie-nazwa {
+  text-align: center;
+
+  color: #bdbdbd;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.porownanie-prawa {
+  text-align: left;
+  padding-left: 8px;
+
+  color: #ff8a8a;
+  font-weight: bold;
+}
+
+
+/* Najważniejsze statystyki */
+
+.porownanie-wiersz.glowna {
+  min-height: 38px;
+}
+
+.porownanie-wiersz.glowna .porownanie-nazwa {
+  color: #fff;
+  font-weight: bold;
+}
+
+.porownanie-wiersz.glowna .porownanie-lewa,
+.porownanie-wiersz.glowna .porownanie-prawa {
+  font-size: 19px;
+}
+.gracz-1 {
+  transform: translateX(130px);
+}
+
+.gracz-2 {
+  justify-self: start;
+}
+
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 1450px) {
+
+  .areny {
+    gap: 15px;
+  }
+
+  .porownanie {
+    width: 260px;
+  }
+
+  .porownanie-wiersz {
+    grid-template-columns: 70px 1fr 70px;
+  }
+}
+
+
+@media (max-width: 1150px) {
+
+  .areny {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    row-gap: 15px;
+  }
+
+  .gracz-1,
+  .gracz-2 {
+    justify-self: center;
+  }
+
+  .porownanie {
+    width: calc((105px * 5) + (8px * 4));
+    margin-top: 0;
+  }
+}
+
+    /* pasek PŻ */
+
+    .pasek-hp-wrapper {
+      width: calc((130px * 5) + (10px * 4));
+    }
+
+    .pasek-hp-etykieta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #ccc;
+    }
+    .pasek-statusy {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.statusy {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.status-efekt {
+  white-space: nowrap;
+}
+
+    .pasek-hp-tlo {
+      width: 100%;
+      height: 22px;
+      background: #2a0a0a;
+      border: 1px solid #5a3838;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pasek-hp-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(#5fd97a, #2e9e46);
+      transition: width 0.35s ease;
+    }
+
+    .gracz-2 .pasek-hp-fill {
+      background: linear-gradient(#ff8a6a, #c94a2e);
+    }
+
+    .pasek-hp-tekst {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    /* =========================================
+       ARENA / WALKA
+       ========================================= */
+
+    .starcie-layout {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px 20px;
+    }
+
+    .arena-walki {
+      max-width: 900px;
+      margin: 0px auto 5px;
+      flex: 1 1 500px;
+    }
+
+    /* =========================================
+       PODSUMOWANIE OBRAŻEŃ PO WALCE
+       ========================================= */
+
+    .podsumowanie-obrazen {
+      width: 310px;
+      flex-shrink: 0;
+
+      background: rgba(10, 20, 10, 0.92);
+      border: 2px solid #385a3c;
+      border-radius: 10px;
+      padding: 14px 16px;
+
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+    }
+
+    .podsumowanie-obrazen.po-gracz-1 { border-color: #385a7c; }
+    .podsumowanie-obrazen.po-gracz-2 { border-color: #5a3838; }
+
+    .podsumowanie-naglowek {
+      text-align: center;
+      margin: 0 0 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .podsumowanie-naglowek .tytul {
+      display: block;
+      font-size: 13px;
+      color: #999;
+      letter-spacing: 1px;
+    }
+
+    .podsumowanie-naglowek .gracz {
+      display: block;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+
+    .po-gracz-1 .podsumowanie-naglowek .gracz { color: #7fc4ff; }
+    .po-gracz-2 .podsumowanie-naglowek .gracz { color: #ff8a8a; }
+
+    .podsumowanie-naglowek .wynik {
+      display: block;
+      font-size: 12px;
+      margin-top: 4px;
+      font-weight: bold;
+    }
+
+    .wynik.wygrana { color: #ffd700; }
+    .wynik.przegrana { color: #999; }
+
+    .ps-sekcja {
+      margin-top: 10px;
+    }
+
+    .ps-sekcja-tytul {
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .ps-wiersz {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ps-wiersz:last-child { border-bottom: none; }
+
+    .ps-nazwa { color: #ccc; }
+
+    .ps-wartosc { color: #ff6ec7; font-weight: bold; white-space: nowrap; margin-left: 8px; }
+
+    .ps-procent { font-weight: normal; color: #999; font-size: 11px; }
+
+    .ps-bazowe { color: #69c9ff; }
+    .ps-kryt { color: #ffd700; }
+    .ps-trucizna { color: #7dff7d; }
+    .ps-przeszywka { color: #ffb347; }
+    .ps-krwawienie { color: #ff5555; }
+    .ps-kradziez { color: #ff6ec7; }
+
+    .ps-tytul-zadane { color: #7fd97f; }
+    .ps-tytul-otrzymane { color: #ff8a8a; }
+
+    .ps-total {
+      margin-top: 6px;
+      padding-top: 8px;
+      border-top: 2px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    .ps-total-mala {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .ps-total .ps-wartosc { color: #ff4d4d; }
+
+    .podsumowanie-puste {
+      text-align: center;
+      color: #777;
+      font-size: 13px;
+      padding: 18px 6px;
+    }
+
+    @media (max-width: 1150px) {
+      .starcie-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    .arena-panel {
+      background: rgba(10, 20, 10, 0.95);
+      border: 2px solid #385a3c;
+      border-radius: 10px;
+      padding: 6px 20px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+    }
+
+    .arena-panel h2 {
+      margin: 0 0 14px;
+      text-align: center;
+      font-size: 20px;
+      color: #dfe9df;
+      text-shadow: 0 2px 5px #000;
+    }
+
+    .paski-vs {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .paski-vs > div:first-child,
+    .paski-vs > div:last-child {
+      flex: 1;
+    }
+
+    .vs-tekst {
+      font-weight: bold;
+      color: #888;
+      font-size: 13px;
+    }
+
+    .arena-przyciski {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .log-walki {
+      height: 220px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .log-wpis {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .log-krytyk { color: #ffd700; font-weight: bold; }
+    .log-blok { color: #69c9ff; }
+    .log-trucizna { color: #7dff7d; }
+.log-krwawienie { color: #ff5555; }
+    .log-przeszywka { color: #ffb347; }
+    .log-kradziez { color: #ff6ec7; }
+    .log-omdlenie { color: #d9a5ff; }
+    .log-zwyciestwo { color: #ffd700; font-weight: bold; font-size: 15px; }
+    .log-info { color: #999; font-style: italic; }
+
+    /* =========================================
+       TOOLTIP
+       ========================================= */
+
+    .tooltip {
+      position: fixed;
+      left: 0;
+      top: 0;
+
+      width: 401px;
+      height: 704px;
+
+      z-index: 9999;
+      display: none;
+
+      pointer-events: none;
+
+      filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.8));
+    }
+
+    .tooltip.visible {
+      display: block;
+    }
+
+    .tooltip-item {
+      display: block;
+
+      width: 401px;
+      height: 479px;
+
+      object-fit: contain;
+
+      margin: 0;
+      padding: 0;
+    }
+
+    .tooltip-item.primal {
+      filter:
+        hue-rotate(-125deg)
+        saturate(1.8)
+        brightness(0.82)
+        drop-shadow(0 0 9px rgba(150, 10, 10, 0.7));
+    }
+    .tooltip-affix.primal {
+      filter:
+        drop-shadow(0 0 8px rgba(150, 10, 10, 0.75))
+        drop-shadow(0 0 18px rgba(120, 0, 0, 0.5));
+    }
+
+    .tooltip-affix {
+      position: relative;
+
+      width: 401px;
+      height: 225px;
+
+      margin: 0;
+      padding: 0;
+
+      background-image: url("affix-background.png");
+      background-repeat: no-repeat;
+      background-position: top left;
+      background-size: 401px 225px;
+    }
+
+    .tooltip-affix-list {
+      position: absolute;
+
+      left: 20px;
+      right: 20px;
+      top: 17px;
+
+      width: 361px;
+    }
+
+    .affix {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      width: 100%;
+      height: 38px;
+
+      padding: 0 4px;
+
+      font-size: 20px;
+      line-height: 38px;
+
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    .affix-name {
+  color: #e8e8e8;
+  text-align: left;
+  white-space: nowrap;
+
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.affix-range {
+  color: #777;
+  font-size: 13px;
+  font-weight: normal;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+    .affix-value {
+      color: #69c9ff;
+      text-align: right;
+      white-space: nowrap;
+      margin-left: 10px;
+    }
+/* =========================================
+   AFFIX PASYWNY — STRZAŁA
+   ========================================= */
+
+.affix-pasywka {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  height: auto;
+  min-height: 82px;
+
+  padding: 6px 8px;
+
+  text-align: center;
+  line-height: normal;
+}
+
+.affix-pasywka-nazwa {
+  color: #e8e8e8;
+
+  font-size: 30px;
+  font-weight: bold;
+
+  text-align: center;
+
+  text-shadow:
+    1px 1px 2px #000,
+    0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+.affix-pasywka-opis {
+  margin-top: 7px;
+
+  color: #999;
+  font-size: 22px;
+  font-weight: normal;
+  line-height: 1.3;
+
+  text-align: center;
+
+  text-shadow: 1px 1px 2px #000;
+}
+
+/* Wylosowana wartość */
+.pasywka-wartosc {
+  color: #69c9ff;
+  font-weight: bold;
+}
+.pasywka-zakres {
+  color: #777;
+  font-size: 14px;
+  font-weight: normal;
+  text-shadow: none;
+  white-space: nowrap;
+  margin-left: 3px;
+}
+
+/* Wartość = MAX */
+.pasywka-wartosc-max {
+  color: #ffd700;
+  font-weight: bold;
+
+  text-shadow:
+    0 0 4px rgba(255, 215, 0, 0.7),
+    1px 1px 2px #000;
+}
+
+    .affix-value.max-value {
+      color: #ffd700;
+
+      text-shadow:
+        0 0 4px rgba(255, 215, 0, 0.7),
+        1px 1px 2px #000;
+    }
+
+    /* =========================================
+       MAŁE EKRANY
+       ========================================= */
+
+    @media (max-width: 700px) {
+      .plansza {
+        --item-w: 105px;
+        --item-h: 125px;
+        width: calc((var(--item-w) * 5) + (8px * 4));
+        grid-template-columns: repeat(5, var(--item-w));
+        gap: 8px;
+      }
+
+    
+
+      .item-nazwa { display: none; }
+
+      .tooltip {
+        transform: scale(0.78);
+        transform-origin: top left;
+      }
+    }
