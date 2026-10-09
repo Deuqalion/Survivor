@@ -540,3 +540,19 @@ body { transform: none; }
   color: #9a9a9a;
   text-shadow: 1px 1px 2px #000;
 }
+
+/* ==========================================================
+   WIKI: podświetlanie tego samego affixu po najechaniu.
+   Pasujące affixy zachowują kolor, reszta robi się szara.
+   ========================================================== */
+
+#wiki-grid.wiki-filtr .wiki-affix:not(.wiki-pasuje) .wiki-affix-nazwa,
+#wiki-grid.wiki-filtr .wiki-affix:not(.wiki-pasuje) .wiki-affix-zakres {
+  color: #6f6f6f;
+  text-shadow: none;
+}
+
+.wiki-affix-nazwa,
+.wiki-affix-zakres {
+  transition: color 0.12s ease;
+}

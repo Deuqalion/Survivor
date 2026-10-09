@@ -109,6 +109,7 @@ let kolejnoscOdblokowaniaItemow = {};
 let falaArcybossAktywna = false;
 let nastepnyProgArcybossa = PROG_FALI_ARCYBOSSA;
 let arcybossyPokonane = 0;
+let numerFaliArcybossa = 0; // którą falę Arcybossa właśnie spawnujemy (1, 2, 3, ...)
 let wykorzystaneWskrzeszenie = false;
 let wskrzeszenieDoCzasu = 0; // performance.now() do kiedy trwa pulsowanie areny
 
@@ -211,6 +212,10 @@ function obliczStatystyki(gracz) {
     predkoscRuchuBonus: isNaN(predkoscRuchuBonus) ? 0 : predkoscRuchuBonus,
     regeneracjaPzSek: isNaN(regeneracjaPzSek) ? 0 : regeneracjaPzSek,
     wskrzeszenieDostepne: !!wskrzeszenieDostepne,
+    // Wartości procentowe wyświetlane w panelu statystyk (survivor-stats.js).
+    // PŻ i pancerz są już przeliczone w pz/pancerz powyżej — to tylko podgląd.
+    wzmocnieniePz: isNaN(wzmocnieniePz) ? 0 : wzmocnieniePz,
+    wzmocnieniePancerza: isNaN(wzmocnieniePancerza) ? 0 : wzmocnieniePancerza,
     obrazeniaTrucizny: isNaN(wzmocnienieTrucizny) ? 0 : wzmocnienieTrucizny,
     obrazeniaKrwawienia: isNaN(wzmocnienieKrwawienia) ? 0 : wzmocnienieKrwawienia,
     obrazeniaKrytyczne: isNaN(wzmocnienieKrytyczne) ? 0 : wzmocnienieKrytyczne,
@@ -461,16 +466,81 @@ function czasSpawnuMs() {
     : CZAS_SPAWNU_MS;
 }
 
+/*
+  Fale Arcybossa pojawiają się przy 100, 200, 300, 400, a po 4. pokonanym
+  Arcybossie już co 200: 600, 800, 1000 ... Dlatego przy 1000 zabitych jest
+  dopiero 7. fala. Żeby mechanika wielu/odpornych Arcybossów zaczynała się
+  od 1000 zabitych, 7. falę liczymy jako "10." (przesunięcie o 3).
+  Zmień tę liczbę, jeśli zmienisz progi fal.
+*/
+const PRZESUNIECIE_NUMERACJI_FAL = 3;
+
+function numerFaliWgTabeli(numerFali) {
+  return numerFali + PRZESUNIECIE_NUMERACJI_FAL;
+}
+
+/*
+  Ile ARCYBOSSÓW pojawia się w danej fali (numer wg tabeli, liczony od 1):
+  fale 1-10 -> 1, fale 11-20 -> 2, fale 21-30 -> 3, fale 31-40 -> 4, ...
+  (bez końca, co 10 fal o jednego więcej).
+*/
+function liczbaArcybossowWFali(numerFali) {
+  return Math.floor((numerFali - 1) / 10) + 1;
+}
+
+/* Co 10. fala (10, 20, 30, ...) — WSZYSTKIE Arcybossy w niej mają redukcję obrażeń. */
+function falaArcybossowOdporna(numerFali) {
+  return numerFali % 10 === 0;
+}
+
+/*
+  Punkty spawnu n Arcybossów rozłożone równomiernie wokół areny, każdy na
+  brzegu: 2 -> przeciwległe strony, 3 -> co 120°, 4 -> co 90° itd.
+  Punkt startowy (kąt) jest losowy, reszta wynika z podziału okręgu.
+*/
+function punktySpawnuArcybossow(n) {
+  const margines = 50;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const polowaW = cx + margines;
+  const polowaH = cy + margines;
+  const kat0 = Math.random() * Math.PI * 2;
+
+  const punkty = [];
+  for (let i = 0; i < n; i++) {
+    const kat = kat0 + (Math.PI * 2 / n) * i;
+    const dx = Math.cos(kat);
+    const dy = Math.sin(kat);
+    // promień od środka areny do prostokąta (arena + margines)
+    const t = Math.min(
+      Math.abs(dx) > 1e-9 ? polowaW / Math.abs(dx) : Infinity,
+      Math.abs(dy) > 1e-9 ? polowaH / Math.abs(dy) : Infinity
+    );
+    punkty.push({ x: cx + dx * t, y: cy + dy * t });
+  }
+  return punkty;
+}
+
 function sprawdzFaleArcybossa() {
   if (falaArcybossAktywna) return;
   if (liczbaZabitych < nastepnyProgArcybossa) return;
 
   falaArcybossAktywna = true;
   nastepnyProgArcybossa += interwalFaliArcybossa();
+  numerFaliArcybossa += 1;
 
-  log("💀 ARCYBOSS i jego świta nadciągają!", "log-zwyciestwo");
+  const numerWgTabeli = numerFaliWgTabeli(numerFaliArcybossa);
+  const liczbaArcybossow = liczbaArcybossowWFali(numerWgTabeli);
+  const wszystkieOdporne = falaArcybossowOdporna(numerWgTabeli);
 
-  stworzArcybossa();
+  log(liczbaArcybossow > 1
+    ? `💀 ${liczbaArcybossow} ARCYBOSSY i ich świta nadciągają!`
+    : "💀 ARCYBOSS i jego świta nadciągają!", "log-zwyciestwo");
+  if (wszystkieOdporne) log("🛡️ Arcybossy tej fali są odporne na obrażenia!", "log-zwyciestwo");
+
+  punktySpawnuArcybossow(liczbaArcybossow).forEach(punkt => {
+    stworzArcybossa(punkt, wszystkieOdporne);
+  });
   for (let i = 0; i < 3; i++) {
     const boss = stworzZwyklegoWroga(losujPunktSpawnu(), false, true);
     boss.falowy = true;
@@ -686,7 +756,7 @@ function stworzZwyklegoWroga(punkt, wymusMelee, wymusBoss = false) {
     krwawienieTury: 0,
     ogluszonyDoCzasu: 0,
     falowy: false,
-    odporny: Math.random() < SZANSA_ODPORNEGO_MOBA
+    odporny: Math.random() < szansaOdpornegoMoba()
   };
 
   wrogowie.push(wrog);
@@ -697,8 +767,8 @@ function stworzZwyklegoWroga(punkt, wymusMelee, wymusBoss = false) {
   return wrog;
 }
 
-function stworzArcybossa() {
-  const punkt = losujPunktSpawnu();
+function stworzArcybossa(punkt, odporny = false) {
+  punkt = punkt || losujPunktSpawnu();
   const n = arcybossyPokonane;
 
   const pz = ARCYBOSS_PZ + n * ARCYBOSS_PZ_PRZYROST;
@@ -722,12 +792,13 @@ function stworzArcybossa() {
     zatruteAtaki: 0,
     krwawienieTury: 0,
     ogluszonyDoCzasu: 0,
-    falowy: true
+    falowy: true,
+    odporny: odporny
   };
 
   wrogowie.push(wrog);
   bossAktywny = true;
-  log("👹 ARCYBOSS pojawia się na arenie!", "log-zwyciestwo");
+  log(odporny ? "👹 ODPORNY ARCYBOSS pojawia się na arenie!" : "👹 ARCYBOSS pojawia się na arenie!", "log-zwyciestwo");
 }
 
 function stworzWroga() {
@@ -975,7 +1046,8 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   }
 
   if (losujProcent() < (staty1.otrucie || 0)) cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
-  if (losujProcent() < (staty1.omdlenie || 0)) cel.ogluszonyDoCzasu = performance.now() + CZAS_OGLUSZENIA_MS;
+  // ARCYBOSSY są odporne na omdlenie (zwykłe moby i Bossy nie).
+  if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) cel.ogluszonyDoCzasu = performance.now() + CZAS_OGLUSZENIA_MS;
   if (losujProcent() < (staty1.krwawienie || 0)) {
     // Pierwszy tik dopiero po 0,5s (tylko gdy nie krwawił już wcześniej —
     // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
@@ -1124,7 +1196,12 @@ const KRWAWIENIE_LICZBA_TIKOW = 6;
   Odporny mob: 1% szans, że pojawiający się mob (melee / ranged / boss)
   otrzymuje tylko 30% obrażeń (redukcja 70%). Oznaczony kolcami.
 */
-const SZANSA_ODPORNEGO_MOBA = 0.01;
+const SZANSA_ODPORNEGO_MOBA = 0.01; // bazowa szansa (przy 0 pokonanych Arcybossach)
+const PRZYROST_SZANSY_ODPORNEGO_NA_ARCYBOSSA = 0.01; // +1 punkt procentowy za każdego pokonanego Arcybossa
+
+function szansaOdpornegoMoba() {
+  return Math.min(1, SZANSA_ODPORNEGO_MOBA + arcybossyPokonane * PRZYROST_SZANSY_ODPORNEGO_NA_ARCYBOSSA);
+}
 const MNOZNIK_DMG_ODPORNEGO = 0.25;
 
 function aktualizujKrwawienieWrogow(teraz) {
@@ -1181,10 +1258,100 @@ function rysujKoloWroga(x, y, promien, kolory) {
   });
 }
 
+/*
+  Wrogowie dystansowi (typ "ranged") są trójkątami skierowanymi czubkiem w
+  stronę gracza. Trójkąt jest równoboczny; promień opisany = promień wroga
+  * 1.25, żeby wizualnie nie był mniejszy od kółka (hitbox bez zmian).
+*/
+const MNOZNIK_ROZMIARU_TROJKATA = 1.25;
+
+function wierzcholkiTrojkata(x, y, promien, kat) {
+  const r = promien * MNOZNIK_ROZMIARU_TROJKATA;
+  const wierzcholki = [];
+  for (let i = 0; i < 3; i++) {
+    const a = kat + i * (Math.PI * 2 / 3);
+    wierzcholki.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
+  }
+  return wierzcholki;
+}
+
+function sciezkaTrojkata(x, y, promien, kat) {
+  const w = wierzcholkiTrojkata(x, y, promien, kat);
+  ctx.beginPath();
+  ctx.moveTo(w[0].x, w[0].y);
+  ctx.lineTo(w[1].x, w[1].y);
+  ctx.lineTo(w[2].x, w[2].y);
+  ctx.closePath();
+}
+
+function rysujTrojkatWroga(x, y, promien, kat, kolory) {
+  const r = promien * MNOZNIK_ROZMIARU_TROJKATA;
+
+  if (kolory.length === 0) {
+    sciezkaTrojkata(x, y, promien, kat);
+    ctx.fillStyle = KOLOR_DOMYSLNY_WROGA;
+    ctx.fill();
+    return;
+  }
+
+  // Statusy jak przy kółku: wycinki koła przycięte do trójkąta.
+  ctx.save();
+  sciezkaTrojkata(x, y, promien, kat);
+  ctx.clip();
+
+  const krok = (Math.PI * 2) / kolory.length;
+  kolory.forEach((kolor, i) => {
+    const start = -Math.PI / 2 + i * krok;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r * 1.2, start, start + krok);
+    ctx.closePath();
+    ctx.fillStyle = kolor;
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+/* Kolce odpornego trójkąta: po 4 na każdym boku, skierowane na zewnątrz. */
+function rysujKolceTrojkata(x, y, promien, kat) {
+  const w = wierzcholkiTrojkata(x, y, promien, kat);
+  const dlugosc = 6;
+  const naBok = 4;
+
+  ctx.save();
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+
+  let licznik = 0;
+  for (let i = 0; i < 3; i++) {
+    const a = w[i];
+    const b = w[(i + 1) % 3];
+    // normalna na zewnątrz = kierunek od środka do środka boku
+    const katNormalnej = kat + i * (Math.PI * 2 / 3) + Math.PI / 3;
+    const nx = Math.cos(katNormalnej);
+    const ny = Math.sin(katNormalnej);
+
+    for (let k = 0; k < naBok; k++) {
+      const f = (k + 0.5) / naBok;
+      const sx = a.x + (b.x - a.x) * f;
+      const sy = a.y + (b.y - a.y) * f;
+
+      ctx.strokeStyle = (licznik++ % 2 === 0) ? "#ffd700" : "#ff2d2d";
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + nx * dlugosc, sy + ny * dlugosc);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
 /* Krótkie kreski (kolce) na przemian żółte i czerwone wokół odpornego moba. */
 function rysujKolceOdpornego(x, y, promien) {
-  const liczba = promien > 20 ? 20 : 10;
-  const dlugosc = promien > 20 ? 9 : 6;
+  const liczba = promien > 50 ? 36 : (promien > 20 ? 20 : 10);
+  const dlugosc = promien > 50 ? 12 : (promien > 20 ? 9 : 6);
 
   ctx.save();
   ctx.lineWidth = 2.5;
@@ -1296,15 +1463,26 @@ function rysujGre() {
   wrogowie.forEach(wrog => {
     const promien = promienWroga(wrog);
     const kolory = aktywneKoloryWroga(wrog, teraz);
-    rysujKoloWroga(wrog.x, wrog.y, promien, kolory);
+    const trojkat = wrog.typ === "ranged";
+    const katTrojkata = trojkat ? Math.atan2(postac.y - wrog.y, postac.x - wrog.x) : 0;
+
+    if (trojkat) rysujTrojkatWroga(wrog.x, wrog.y, promien, katTrojkata, kolory);
+    else rysujKoloWroga(wrog.x, wrog.y, promien, kolory);
 
     ctx.lineWidth = wrog.typ === "arcyboss" ? 5 : (wrog.typ === "boss" ? 3 : 1.5);
     ctx.strokeStyle = wrog.typ === "arcyboss" ? "rgba(255,215,0,0.9)" : "rgba(255,255,255,0.6)";
-    ctx.beginPath();
-    ctx.arc(wrog.x, wrog.y, promien, 0, Math.PI * 2);
+    if (trojkat) {
+      sciezkaTrojkata(wrog.x, wrog.y, promien, katTrojkata);
+    } else {
+      ctx.beginPath();
+      ctx.arc(wrog.x, wrog.y, promien, 0, Math.PI * 2);
+    }
     ctx.stroke();
 
-    if (wrog.odporny) rysujKolceOdpornego(wrog.x, wrog.y, promien);
+    if (wrog.odporny) {
+      if (trojkat) rysujKolceTrojkata(wrog.x, wrog.y, promien, katTrojkata);
+      else rysujKolceOdpornego(wrog.x, wrog.y, promien);
+    }
 
     const szerokoscPaska = promien * 2;
     const x0 = wrog.x - promien;
@@ -1438,6 +1616,7 @@ function rozpocznijGre() {
   falaArcybossAktywna = false;
   nastepnyProgArcybossa = PROG_FALI_ARCYBOSSA;
   arcybossyPokonane = 0;
+  numerFaliArcybossa = 0;
   czasDoSpawnu = 500;
   czasDoAtakuGracza = pobierzCzasAtakuGracza();
   ostatniCzas = 0;
@@ -1516,8 +1695,53 @@ inicjalizujSurvivora();
 let wikiOtwarta = false;
 function wikiEsc(tekst) { return String(tekst ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 function formatZakresAffixu(affix) { if (!affix) return ""; const suffix = affix.suffix || ""; const min = `${affix.min}${suffix}`; const max = `${affix.max}${suffix}`; return min === max ? min : `${min} – ${max}`; }
-function zbudujWikiItem(item) { const mozliwe = (item.mozliweAffixy || []).map(nazwa => znajdzAffix(nazwa)).filter(Boolean); const affixyHtml = mozliwe.length ? mozliwe.map(affix => `<div class="wiki-affix"><span class="wiki-affix-nazwa">${wikiEsc(affix.nazwa)}</span><span class="wiki-affix-zakres"> ${wikiEsc(formatZakresAffixu(affix))}</span></div>`).join("") : `<div class="wiki-brak">Brak możliwych affixów</div>`; return `<article class="wiki-item"><img class="wiki-item-obraz" src="${wikiEsc(item.obraz)}" alt="${wikiEsc(item.nazwa)}"><div class="wiki-item-tresc"><div class="wiki-item-nazwa">${wikiEsc(item.nazwa)}</div>${affixyHtml}</div></article>`; }
+function zbudujWikiItem(item) { const mozliwe = (item.mozliweAffixy || []).map(nazwa => znajdzAffix(nazwa)).filter(Boolean); const affixyHtml = mozliwe.length ? mozliwe.map(affix => `<div class="wiki-affix" data-affix="${wikiEsc(affix.nazwa)}"><span class="wiki-affix-nazwa">${wikiEsc(affix.nazwa)}</span><span class="wiki-affix-zakres"> ${wikiEsc(formatZakresAffixu(affix))}</span></div>`).join("") : `<div class="wiki-brak">Brak możliwych affixów</div>`; return `<article class="wiki-item"><img class="wiki-item-obraz" src="${wikiEsc(item.obraz)}" alt="${wikiEsc(item.nazwa)}"><div class="wiki-item-tresc"><div class="wiki-item-nazwa">${wikiEsc(item.nazwa)}</div>${affixyHtml}</div></article>`; }
 function wypelnijWiki() { const grid = document.getElementById("wiki-grid"); if (!grid || typeof itemy === "undefined") return; grid.innerHTML = Object.values(itemy).map(zbudujWikiItem).join(""); }
-function otworzWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; wypelnijWiki(); overlay.classList.add("visible"); overlay.setAttribute("aria-hidden", "false"); wikiOtwarta = true; document.body.classList.add("wiki-aktywna"); }
-function zamknijWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; overlay.classList.remove("visible"); overlay.setAttribute("aria-hidden", "true"); wikiOtwarta = false; document.body.classList.remove("wiki-aktywna"); }
+/*
+  Wikipedia pauzuje grę, ale tylko jeśli ta faktycznie trwała (nie była już
+  spauzowana ręcznie, nie czekała na wybór ulepszenia i nie była nierozpoczęta).
+  Po zamknięciu wznawia ją tylko wtedy, gdy to właśnie wiki ją zatrzymała.
+*/
+let wikiZatrzymalaGre = false;
+
+function otworzWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; if (wikiOtwarta) return;
+  if (graTrwa && !oczekiwanieNaUlepszenieItemu) { graTrwa = false; ustawPrzyciski("pauza"); wikiZatrzymalaGre = true; }
+  wypelnijWiki(); wyczyscPodswietlenieWiki(); overlay.classList.add("visible"); overlay.setAttribute("aria-hidden", "false"); wikiOtwarta = true; document.body.classList.add("wiki-aktywna"); }
+function zamknijWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; overlay.classList.remove("visible"); overlay.setAttribute("aria-hidden", "true"); wikiOtwarta = false; document.body.classList.remove("wiki-aktywna");
+  wyczyscPodswietlenieWiki();
+  if (wikiZatrzymalaGre) {
+    wikiZatrzymalaGre = false;
+    if (!graTrwa && !oczekiwanieNaUlepszenieItemu) { graTrwa = true; ostatniCzas = 0; ustawPrzyciski("gra"); requestAnimationFrame(petlaGry); }
+  }
+}
+
+/*
+  Najechanie na dowolny affix w wiki: wszystkie takie same affixy zostają w
+  swoim kolorze, pozostałe robią się szare (klasy wiki-filtr / wiki-pasuje,
+  style w survivor.css). Dzięki temu widać od razu, które itemy mają dany affix.
+*/
+function podswietlWikiAffix(nazwa) {
+  const grid = document.getElementById("wiki-grid");
+  if (!grid) return;
+  grid.classList.add("wiki-filtr");
+  grid.querySelectorAll(".wiki-affix").forEach(el => el.classList.toggle("wiki-pasuje", el.dataset.affix === nazwa));
+}
+
+function wyczyscPodswietlenieWiki() {
+  const grid = document.getElementById("wiki-grid");
+  if (!grid) return;
+  grid.classList.remove("wiki-filtr");
+  grid.querySelectorAll(".wiki-pasuje").forEach(el => el.classList.remove("wiki-pasuje"));
+}
+
+(function () {
+  const grid = document.getElementById("wiki-grid");
+  if (!grid) return;
+  grid.addEventListener("mouseover", event => {
+    const affix = event.target.closest && event.target.closest(".wiki-affix");
+    if (affix) podswietlWikiAffix(affix.dataset.affix);
+    else wyczyscPodswietlenieWiki();
+  });
+  grid.addEventListener("mouseleave", wyczyscPodswietlenieWiki);
+})();
 document.addEventListener("keydown", event => { if (event.key === "Escape" && wikiOtwarta) zamknijWiki(); });
