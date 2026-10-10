@@ -98,8 +98,12 @@ let efekty = [];
 let nastepneIdWroga = 1;
 
 let graTrwa = false;
+let graWToku = false; // true od START do śmierci — także podczas pauzy / wiki / okna ulepszenia
 let ostatniCzas = 0;
 let czasDoSpawnu = 0;
+let blyskObrazenMs = 0; // pozostały czas czerwonego błysku brzegów areny po otrzymaniu obrażeń
+const CZAS_BLYSKU_OBRAZEN_MS = 350;
+let czasGryMs = 0; // czas bieżącej gry (liczy się tylko, gdy pętla gry faktycznie działa)
 let czasDoAtakuGracza = 0;
 let licznikRegeneracjiMs = 0;
 
@@ -121,12 +125,12 @@ function obliczStatystyki(gracz) {
   let pz = 15000;
   let podstawoweObrażenia = 3000;
   let obrazeniaUmiejetnosci = 0;
-  let kryt = 5;
-  let przeszywka = 5;
-  let omdlenie = 1;
-  let blok = 1;
-  let otrucie = 1;
-  let krwawienie = 1;
+  let kryt = 0;
+  let przeszywka = 0;
+  let omdlenie = 0;
+  let blok = 0;
+  let otrucie = 0;
+  let krwawienie = 0;
   let dodatkowePz = 0;
   let wartoscAtaku = 0;
   let pancerz = 5;
@@ -135,6 +139,7 @@ function obliczStatystyki(gracz) {
   let predkoscRuchuBonus = 0;
   let regeneracjaPzSek = 0;
   let wskrzeszenieDostepne = false;
+  let obrazeniaObszaroweDostepne = false;
 
   let wzmocnieniePz = 0;
   let wzmocnieniePancerza = 0;
@@ -174,10 +179,12 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Wartość ataku" || nazwa === "Wartość ataku: +150") wartoscAtaku += val;
       else if (nazwa === "Pancerz" || nazwa === "Pancerz: 35") pancerz += val;
       else if (nazwa === "Kradzież życia") kradziezZycia += val;
-      else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +20%") predkoscAtaku += val;
+      else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
       else if (nazwa === "Wskrzeszenie") wskrzeszenieDostepne = true;
+      else if (nazwa === "Obrażenia obszarowe") obrazeniaObszaroweDostepne = true;
+      else if (nazwa === "Zwykła strzała") wartoscAtaku += val; // "Dodaje {x} Wartości Ataku."
 
       else if (nazwa === "Wzmocnienie PŻ") wzmocnieniePz += val;
       else if (nazwa === "Wzmocnienie Pancerza") wzmocnieniePancerza += val;
@@ -200,18 +207,19 @@ function obliczStatystyki(gracz) {
     wartoscAtaku: isNaN(wartoscAtaku) ? 0 : wartoscAtaku,
     bazoweObrazenia: (isNaN(podstawoweObrażenia) ? 3000 : podstawoweObrażenia) + (isNaN(wartoscAtaku) ? 0 : wartoscAtaku),
     obrazeniaUmiejetnosci: isNaN(obrazeniaUmiejetnosci) ? 0 : obrazeniaUmiejetnosci,
-    kryt: isNaN(kryt) ? 5 : kryt,
-    przeszywka: isNaN(przeszywka) ? 5 : przeszywka,
-    omdlenie: isNaN(omdlenie) ? 1 : omdlenie,
-    blok: isNaN(blok) ? 1 : blok,
-    otrucie: isNaN(otrucie) ? 1 : otrucie,
-    krwawienie: isNaN(krwawienie) ? 1 : krwawienie,
+    kryt: isNaN(kryt) ? 0 : kryt,
+    przeszywka: isNaN(przeszywka) ? 0 : przeszywka,
+    omdlenie: isNaN(omdlenie) ? 0 : omdlenie,
+    blok: isNaN(blok) ? 0 : blok,
+    otrucie: isNaN(otrucie) ? 0 : otrucie,
+    krwawienie: isNaN(krwawienie) ? 0 : krwawienie,
     pancerz: isNaN(finalnyPancerz) ? 5 : finalnyPancerz,
     kradziezZycia: isNaN(kradziezZycia) ? 0 : kradziezZycia,
     predkoscAtaku: isNaN(predkoscAtaku) ? 0 : predkoscAtaku,
     predkoscRuchuBonus: isNaN(predkoscRuchuBonus) ? 0 : predkoscRuchuBonus,
     regeneracjaPzSek: isNaN(regeneracjaPzSek) ? 0 : regeneracjaPzSek,
     wskrzeszenieDostepne: !!wskrzeszenieDostepne,
+    obrazeniaObszarowe: !!obrazeniaObszaroweDostepne,
     // Wartości procentowe wyświetlane w panelu statystyk (survivor-stats.js).
     // PŻ i pancerz są już przeliczone w pz/pancerz powyżej — to tylko podgląd.
     wzmocnieniePz: isNaN(wzmocnieniePz) ? 0 : wzmocnieniePz,
@@ -234,18 +242,18 @@ function obliczStatystyki(gracz) {
    ============================================================ */
 
 const MAPA_ULEPSZEN_ITEMOW = {
-  "bron": "Obrażenia umiejętności: +10%",
+  "bron": "Obrażenia obszarowe",
   "buty": "Prędkość ruchu: +15%",
   "helm": "Regeneracja PŻ 5%/sek",
   "zbroja": "Wskrzeszenie",
   "naramienniki": "Dodatkowe PŻ: 4000",
-  "rekawice": "Prędkość ataku: +20%",
+  "rekawice": "Prędkość ataku: +35%",
   "spodnie": "Pancerz: 35",
   "kolczyki": "Szansa na kryta: 10%",
   "naszyjnik": "Szansa na przeszywkę: 10%",
   "bransoleta": "Szansa na otrucie: 10%",
   "pierscien": "Szansa na omdlenie: 10%",
-  "strzala": "Wartość ataku: +150"
+  "strzala": "Elektryczna strzała"
 };
 
 let oczekiwanieNaUlepszenieItemu = false;
@@ -309,6 +317,30 @@ function wypelnijSiatkeUlepszen() {
   });
 }
 
+/* Podmienia pasywkę strzały (Zwykła <-> Elektryczna) w już wylosowanej liście
+   affixów. Jeśli strzała nie ma jeszcze affixów, nic nie robi — pierwszy rzut
+   sam wybierze właściwą pasywkę (nazwaAffixuZUlepszenia w generator.js). */
+function zamienPasywkeStrzaly(nazwaNowa) {
+  const lista = stan[1].wylosowane[ITEM_STRZALA];
+  if (!lista) return;
+
+  const indeks = lista.findIndex(a => a.nazwa === "Zwykła strzała" || a.nazwa === "Elektryczna strzała");
+  if (indeks < 0 || lista[indeks].nazwa === nazwaNowa) return;
+
+  const definicja = znajdzAffix(nazwaNowa);
+  if (!definicja) return;
+
+  const pierwotny = !!stan[1].pierwotne[ITEM_STRZALA];
+  lista[indeks] = {
+    nazwa: definicja.nazwa,
+    wartosc: pierwotny ? definicja.max : losujLiczbe(definicja.min, definicja.max),
+    suffix: definicja.suffix || "",
+    pasywka: !!definicja.pasywka,
+    opis: definicja.opis || "",
+    ulepszenie: false
+  };
+}
+
 function wykonajUlepszenieItemu(itemId) {
   if (ulepszoneItemySet.has(itemId)) return;
 
@@ -316,21 +348,30 @@ function wykonajUlepszenieItemu(itemId) {
   const nazwaAffixuUlepszenia = MAPA_ULEPSZEN_ITEMOW[item.nazwa];
   if (!nazwaAffixuUlepszenia) return;
 
-  const definicja = znajdzAffix(nazwaAffixuUlepszenia);
-  if (!definicja) return;
+  if (item.nazwa === "strzala") {
+    // Strzała: ulepszenie ZASTĘPUJE pasywkę "Zwykła strzała" pasywką
+    // "Elektryczna strzała" (wartość 1–5 losowana jak zwykły affix).
+    ulepszoneItemySet.add(itemId);
+    zamienPasywkeStrzaly("Elektryczna strzała");
+  } else {
+    const definicja = znajdzAffix(nazwaAffixuUlepszenia);
+    if (!definicja) return;
 
-  // Przechowywany OSOBNO od stan[1].wylosowane, żeby reroll (LOSUJ) tego
-  // itemu nigdy nie skasował affixu z ulepszenia.
-  stan[1].ulepszeniaAffixy[itemId] = {
-    nazwa: definicja.nazwa,
-    wartosc: definicja.max,
-    suffix: definicja.suffix || "",
-    pasywka: !!definicja.pasywka,
-    opis: definicja.opis || "",
-    ulepszenie: true
-  };
+    // Przechowywany OSOBNO od stan[1].wylosowane, żeby reroll (LOSUJ) tego
+    // itemu nigdy nie skasował affixu z ulepszenia.
+    stan[1].ulepszeniaAffixy[itemId] = {
+      nazwa: definicja.nazwa,
+      wartosc: definicja.max,
+      suffix: definicja.suffix || "",
+      pasywka: !!definicja.pasywka,
+      opis: definicja.opis || "",
+      tekst: definicja.tekstTooltip || "",
+      ulepszenie: true
+    };
 
-  ulepszoneItemySet.add(itemId);
+    ulepszoneItemySet.add(itemId);
+  }
+
   obliczStatystyki(1);
   utworzItemy(1);
 
@@ -461,8 +502,11 @@ function interwalFaliArcybossa() {
 }
 
 function czasSpawnuMs() {
+  // Do 3 pokonanych Arcybossów: stałe 1800 ms. Od 4. działa wzór
+  // 1800 / (1 + sqrt(x / 4)), gdzie x = liczba pokonanych Arcybossów
+  // (x=4 -> 900 ms, x=5 -> ~849,85 ms, ...).
   return arcybossyPokonane >= ARCYBOSSY_DO_ULEPSZENIA
-    ? CZAS_SPAWNU_MS * MNOZNIK_CZASU_SPAWNU_PO_ULEPSZENIU
+    ? CZAS_SPAWNU_MS / (1 + Math.sqrt(arcybossyPokonane / 4))
     : CZAS_SPAWNU_MS;
 }
 
@@ -609,7 +653,19 @@ function ustawKlawisz(kod, wcisniety) {
 }
 
 window.addEventListener("keydown", event => ustawKlawisz(event.code, true));
-window.addEventListener("keyup", event => ustawKlawisz(event.code, false));
+window.addEventListener("keyup", event => {
+  ustawKlawisz(event.code, false);
+  if (event.code === "Space") event.preventDefault();
+});
+
+// SPACJA = pauza / wznów (nie działa przy otwartej wiki ani gdy gra nie wystartowała)
+window.addEventListener("keydown", event => {
+  if (event.code !== "Space") return;
+  event.preventDefault();
+  if (event.repeat) return;
+  if (wikiOtwarta) return;
+  przelaczPauze();
+});
 
 function aktualizujRuchGracza(dtMs) {
   let dx = 0;
@@ -665,7 +721,8 @@ function aktualizujHudPostaci(graczId) {
   if (!staty) return;
 
   postac.maxHp = staty.pz;
-  if (!graTrwa) postac.hp = postac.maxHp;
+  if (!graWToku) postac.hp = postac.maxHp;                 // przed grą / po śmierci: pełne PŻ
+  else postac.hp = Math.min(postac.hp, postac.maxHp);      // w trakcie gry (też na pauzie): zachowaj aktualne PŻ
   aktualizujPasekPostaci();
 }
 
@@ -677,6 +734,22 @@ function aktualizujPasekPostaci() {
   const procent = postac.maxHp > 0 ? Math.max(0, Math.min(100, (postac.hp / postac.maxHp) * 100)) : 0;
   fill.style.width = `${procent}%`;
   tekst.textContent = `${Math.round(Math.max(0, postac.hp)).toLocaleString("pl-PL")} / ${Math.round(postac.maxHp).toLocaleString("pl-PL")}`;
+}
+
+function formatCzasuGry(ms) {
+  const sek = Math.floor(ms / 1000);
+  const h = Math.floor(sek / 3600);
+  const m = Math.floor((sek % 3600) / 60);
+  const s = sek % 60;
+  const dwie = n => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${dwie(m)}:${dwie(s)}` : `${dwie(m)}:${dwie(s)}`;
+}
+
+function aktualizujCzasGry() {
+  const el = document.getElementById("czas-gry");
+  if (!el) return;
+  const tekst = formatCzasuGry(czasGryMs);
+  if (el.textContent !== tekst) el.textContent = tekst;
 }
 
 function aktualizujInfo() {
@@ -907,6 +980,17 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
 
   if (losujProcent() < (staty1.blok || 0)) {
     log("🔰 BLOKUJESZ atak wroga! (0 obrażeń)", "log-blok");
+    // Unoszący się napis nad postacią — tak jak liczby obrażeń (efekt "tekst")
+    efekty.push({
+      typ: "tekst",
+      x: postac.x,
+      y: postac.y - 32,
+      tekst: "🛡️ BLOK 🛡️",
+      kolor: "#7fc4ff",
+      rozmiar: 25,
+      zycie: 700,
+      zycieMax: 700
+    });
     return;
   }
 
@@ -920,6 +1004,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
   const dmg = Math.round(dmgBazowe * redukcja);
 
   postac.hp = Math.max(0, postac.hp - dmg);
+  if (dmg > 0) blyskObrazenMs = CZAS_BLYSKU_OBRAZEN_MS;
   aktualizujPasekPostaci();
 
   if (postac.hp <= 0) {
@@ -1081,8 +1166,36 @@ function atakGracza() {
   });
 }
 
+/* Ulepszenie broni: 33% szansy na Obrażenia obszarowe przy trafieniu.
+   Obrażenia wybuchu = 90–110% obrażeń tego trafienia (losowane przy każdym
+   wybuchu, nie z affixu). Wywoływane dla trafienia strzałą ORAZ dla każdego
+   ogniwa łańcucha Elektrycznej strzały. */
+function sprobujObrazenObszarowych(cel, dmg, staty1) {
+  if (!staty1.obrazeniaObszarowe || !dmg) return;
+  if (losujProcent() >= SZANSA_PROCKA_STRZALY) return;
+
+  const mnoznikWybuchu = (90 + Math.random() * 20) / 100;
+  dodajEfektWybuchu(cel.x, cel.y, PROMIEN_OGNIA);
+
+  wrogowie.forEach(wrog => {
+    if (wrog.id === cel.id || wrog.hp <= 0) return;
+    if (Math.hypot(cel.x - wrog.x, cel.y - wrog.y) > PROMIEN_OGNIA) return;
+
+    const dmgWybuchu = Math.round(dmg * mnoznikWybuchu);
+    if (dmgWybuchu <= 0) return;
+    const redukcja = 100 / (100 + wrog.pancerz);
+    const dmgPoPancerzu = Math.round(dmgWybuchu * redukcja * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+
+    wrog.hp -= dmgPoPancerzu;
+    dodajEfektAtaku(wrog.x, wrog.y, dmgPoPancerzu, { xZrodla: cel.x, yZrodla: cel.y });
+    if (wrog.hp <= 0) zabijWroga(wrog);
+  });
+}
+
 function trafienieStrzalaGracza(cel, staty1, pocisk) {
   const dmg = wykonajPojedynczyAtak(cel, staty1, pocisk.x, pocisk.y, pocisk.mnoznikPrzebicia);
+
+  sprobujObrazenObszarowych(cel, dmg, staty1);
 
   if ((staty1.ognistaStrzala || 0) > 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
     dodajEfektWybuchu(cel.x, cel.y, PROMIEN_OGNIA);
@@ -1109,7 +1222,8 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
-      wykonajPojedynczyAtak(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y);
+      const dmgOgniwa = wykonajPojedynczyAtak(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y);
+      sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
     }
   }
@@ -1152,7 +1266,7 @@ function zabijWroga(wrog) {
 
     if (arcybossyPokonane === ARCYBOSSY_DO_ULEPSZENIA) {
       nastepnyProgArcybossa += PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU - PROG_FALI_ARCYBOSSA;
-      log("⚡ Wrogowie respią się 2x szybciej, a ARCYBOSSY co 200 zabójstw!", "log-zwyciestwo");
+      log("⚡ Wrogowie respią się coraz szybciej, a ARCYBOSSY co 200 zabójstw!", "log-zwyciestwo");
     }
 
     sprawdzWywołanieUlepszenia();
@@ -1442,6 +1556,7 @@ function dodajEfektWybuchu(x, y, promien) {
 function aktualizujEfekty(dtMs) {
   efekty.forEach(e => e.zycie -= dtMs);
   efekty = efekty.filter(e => e.zycie > 0);
+  if (blyskObrazenMs > 0) blyskObrazenMs = Math.max(0, blyskObrazenMs - dtMs);
 }
 
 function rysujGre() {
@@ -1567,6 +1682,17 @@ function rysujGre() {
     ctx.fillStyle = `rgba(255, 215, 0, ${Math.max(0, puls * pozostaleSek)})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+
+  // Czerwony błysk brzegów areny po otrzymaniu obrażeń (środek pozostaje przezroczysty)
+  if (blyskObrazenMs > 0) {
+    const w = canvas.width, h = canvas.height;
+    const sila = blyskObrazenMs / CZAS_BLYSKU_OBRAZEN_MS;
+    const grad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) / 2);
+    grad.addColorStop(0, "rgba(255, 0, 0, 0)");
+    grad.addColorStop(1, `rgba(255, 0, 0, ${0.55 * sila})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
 }
 
 function petlaGry(teraz) {
@@ -1574,6 +1700,9 @@ function petlaGry(teraz) {
 
   const dtMs = ostatniCzas ? teraz - ostatniCzas : 16;
   ostatniCzas = teraz;
+
+  czasGryMs += dtMs;
+  aktualizujCzasGry();
 
   aktualizujRuchGracza(dtMs);
   aktualizujRegeneracjePz(dtMs);
@@ -1618,6 +1747,9 @@ function rozpocznijGre() {
   arcybossyPokonane = 0;
   numerFaliArcybossa = 0;
   czasDoSpawnu = 500;
+  czasGryMs = 0;
+  blyskObrazenMs = 0;
+  aktualizujCzasGry();
   czasDoAtakuGracza = pobierzCzasAtakuGracza();
   ostatniCzas = 0;
   licznikRegeneracjiMs = 0;
@@ -1626,6 +1758,7 @@ function rozpocznijGre() {
 
   ulepszoneItemySet.clear();
   stan[1].ulepszeniaAffixy = {};
+  zamienPasywkeStrzaly("Zwykła strzała"); // nowa gra = strzała znów nieulepszona
   obliczStatystyki(1);
   utworzItemy(1);
 
@@ -1638,6 +1771,7 @@ function rozpocznijGre() {
   log("⚔️ Fale wrogów nadciągają!", "log-info");
 
   graTrwa = true;
+  graWToku = true;
   ustawPrzyciski("gra");
   requestAnimationFrame(petlaGry);
 }
@@ -1662,6 +1796,7 @@ function przelaczPauze() {
 
 function zakonczGre(wygrana) {
   graTrwa = false;
+  graWToku = false;
   ustawPrzyciski("przed");
 
   if (!wygrana) {
@@ -1695,7 +1830,21 @@ inicjalizujSurvivora();
 let wikiOtwarta = false;
 function wikiEsc(tekst) { return String(tekst ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 function formatZakresAffixu(affix) { if (!affix) return ""; const suffix = affix.suffix || ""; const min = `${affix.min}${suffix}`; const max = `${affix.max}${suffix}`; return min === max ? min : `${min} – ${max}`; }
-function zbudujWikiItem(item) { const mozliwe = (item.mozliweAffixy || []).map(nazwa => znajdzAffix(nazwa)).filter(Boolean); const affixyHtml = mozliwe.length ? mozliwe.map(affix => `<div class="wiki-affix" data-affix="${wikiEsc(affix.nazwa)}"><span class="wiki-affix-nazwa">${wikiEsc(affix.nazwa)}</span><span class="wiki-affix-zakres"> ${wikiEsc(formatZakresAffixu(affix))}</span></div>`).join("") : `<div class="wiki-brak">Brak możliwych affixów</div>`; return `<article class="wiki-item"><img class="wiki-item-obraz" src="${wikiEsc(item.obraz)}" alt="${wikiEsc(item.nazwa)}"><div class="wiki-item-tresc"><div class="wiki-item-nazwa">${wikiEsc(item.nazwa)}</div>${affixyHtml}</div></article>`; }
+const WIKI_SKROTY_AFFIXOW = { "Podstawowe obrażenia": "Podst. obrażenia", "Obrażenia umiejętności": "Obrażenia umiej." };
+function wikiAffixHtml(affix, stale) { return `<div class="wiki-affix${stale ? " wiki-affix-stale" : ""}" data-affix="${wikiEsc(affix.nazwa)}"><span class="wiki-affix-nazwa">${wikiEsc(WIKI_SKROTY_AFFIXOW[affix.nazwa] || affix.nazwa)}</span><span class="wiki-affix-zakres"> ${wikiEsc(formatZakresAffixu(affix))}</span></div>`; }
+function wikiTekstUlepszenia(item) { const nazwa = (typeof MAPA_ULEPSZEN_ITEMOW !== "undefined") ? MAPA_ULEPSZEN_ITEMOW[item.nazwa] : null; if (!nazwa) return ""; const def = znajdzAffix(nazwa); return (def && def.tekstTooltip) || nazwa; }
+function zbudujWikiItem(item) {
+  // Affixy stałe (na górze, lekko pogrubione), potem pozostałe możliwe — bez duplikatów.
+  const nazwyStale = Array.isArray(item.staleAffixy) ? item.staleAffixy : (item.stalyAffix ? [item.stalyAffix] : []);
+  const stale = nazwyStale.map(nazwa => znajdzAffix(nazwa)).filter(Boolean);
+  const nazwyStaleSet = new Set(stale.map(a => a.nazwa));
+  const mozliwe = (item.mozliweAffixy || []).map(nazwa => znajdzAffix(nazwa)).filter(Boolean).filter(a => !nazwyStaleSet.has(a.nazwa));
+  const wszystkie = stale.map(a => wikiAffixHtml(a, true)).concat(mozliwe.map(a => wikiAffixHtml(a, false)));
+  const affixyHtml = wszystkie.length ? wszystkie.join("") : `<div class="wiki-brak">Brak możliwych affixów</div>`;
+  const tekstUlepszenia = wikiTekstUlepszenia(item);
+  const ulepszenieHtml = tekstUlepszenia ? `<div class="wiki-ulepszenie">${wikiEsc(tekstUlepszenia)}</div>` : "";
+  return `<article class="wiki-item"><img class="wiki-item-obraz" src="${wikiEsc(item.obraz)}" alt="${wikiEsc(item.nazwa)}"><div class="wiki-item-tresc"><div class="wiki-item-nazwa">${wikiEsc(item.nazwa)}</div>${affixyHtml}${ulepszenieHtml}</div></article>`;
+}
 function wypelnijWiki() { const grid = document.getElementById("wiki-grid"); if (!grid || typeof itemy === "undefined") return; grid.innerHTML = Object.values(itemy).map(zbudujWikiItem).join(""); }
 /*
   Wikipedia pauzuje grę, ale tylko jeśli ta faktycznie trwała (nie była już

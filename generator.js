@@ -30,6 +30,15 @@ const WYMUSZONE_AFFIXY_STARTOWE = {
   5: { nazwa: "Kradzież życia", wartosc: 10 }
 };
 
+/* Ulepszona strzała zamiast "Zwykła strzała" ma pasywkę "Elektryczna strzała". */
+function nazwaAffixuZUlepszenia(itemId, nazwa) {
+  if (Number(itemId) === ITEM_STRZALA && nazwa === "Zwykła strzała" &&
+      typeof ulepszoneItemySet !== "undefined" && ulepszoneItemySet.has(ITEM_STRZALA)) {
+    return "Elektryczna strzała";
+  }
+  return nazwa;
+}
+
 function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = false) {
   const item = itemy[itemId];
   if (!item) return { affixy: [], pierwotny: false };
@@ -38,7 +47,8 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
     ? item.staleAffixy
     : (item.stalyAffix ? [item.stalyAffix] : []);
 
-  const itemPierwotny = Math.random() < SZANSA_PIERWOTNY;
+  // Itemy startowe (wymusWartosciStartowe = true) nigdy nie są pierwotne.
+  const itemPierwotny = !wymusWartosciStartowe && Math.random() < SZANSA_PIERWOTNY;
   const wynik = [];
 
   const liczbaAffixow = iloscAffixow !== null
@@ -47,7 +57,7 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
 
   for (const nazwaStalegoAffixu of staleAffixy) {
     if (wynik.length >= liczbaAffixow) break;
-    const definicja = znajdzAffix(nazwaStalegoAffixu);
+    const definicja = znajdzAffix(nazwaAffixuZUlepszenia(itemId, nazwaStalegoAffixu));
     if (!definicja) continue;
 
     let wartosc;
@@ -120,8 +130,9 @@ function dodajJedenNowyAffix(gracz, itemId) {
 
   let wybranaDefinicja = null;
   for (const nazwaStalegoAffixu of staleAffixy) {
-    if (!uzywaneNazwy.has(nazwaStalegoAffixu)) {
-      wybranaDefinicja = znajdzAffix(nazwaStalegoAffixu);
+    const nazwaDocelowa = nazwaAffixuZUlepszenia(itemId, nazwaStalegoAffixu);
+    if (!uzywaneNazwy.has(nazwaDocelowa)) {
+      wybranaDefinicja = znajdzAffix(nazwaDocelowa);
       break;
     }
   }
@@ -272,7 +283,7 @@ function pokazTooltip(gracz, itemId) {
 
     const blok = document.createElement("div");
     blok.className = `tooltip-ulepszenie-blok${zuzyte ? " zuzyte" : ""}`;
-    blok.textContent = ulepszenieAffix.nazwa;
+    blok.textContent = ulepszenieAffix.tekst || ulepszenieAffix.nazwa;
 
     tooltipAffixList.appendChild(blok);
   }

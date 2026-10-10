@@ -163,7 +163,7 @@ if (typeof aktualizujHudPostaci === "function") aktualizujHudPostaci(gracz);
 
 
     {
-      nazwa: "Obr. umiejętności",
+      nazwa: "Obrażenia umiejętności",
       lewa: formatProcent(staty1.obrazeniaUmiejetnosci),
       prawa: formatProcent(staty2.obrazeniaUmiejetnosci)
     },

@@ -17,7 +17,7 @@ function renderujStatyGracza() {
   const wiersze = [
     { nazwa: "Całkowite PŻ", wartosc: fmtL(s.pz), glowna: true },
     { nazwa: "Całkowite obrażenia", wartosc: fmtL((s.bazoweObrazenia || 0) + (typeof bonusObrazenZZabojstw === "function" ? bonusObrazenZZabojstw() : 0)), glowna: true },
-    { nazwa: "Obr. umiejętności", wartosc: fmtP(s.obrazeniaUmiejetnosci) },
+    { nazwa: "Obrażenia umiejętności", wartosc: fmtP(s.obrazeniaUmiejetnosci) },
     { nazwa: "Pancerz", wartosc: fmtL(s.pancerz) },
     { nazwa: "Szansa kryt", wartosc: fmtP(s.kryt) },
     { nazwa: "Szansa przeszywka", wartosc: fmtP(s.przeszywka) },

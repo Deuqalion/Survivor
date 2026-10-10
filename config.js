@@ -178,15 +178,16 @@ const itemy = {
     nazwa: "strzala",
     obraz: "strzala.png",
     pozycja: { kolumna: 1, wiersz: 1 },
+    // Pasywka "Zwykła strzała" jest stała; po ulepszeniu itemu zamienia się
+    // na "Elektryczna strzała" (patrz nazwaAffixuZUlepszenia w generator.js).
     staleAffixy: [ 
       "Wartość ataku",
-      "Prędkość ataku"
+      "Prędkość ataku",
+      "Zwykła strzała"
     ],
     mozliweAffixy: [
       "Zwykła strzała",
-      "Ognista strzała",
-      "Elektryczna strzała",
-      "Diamentowa strzała",
+      "Wartość ataku",
       "Prędkość ataku"
     ]
   }
@@ -219,13 +220,14 @@ const affixy = [
   { nazwa: "Regeneracja PŻ 5%/sek", min: 5, max: 5, suffix: "%", ulepszenie: true },
   { nazwa: "Wskrzeszenie", min: 1, max: 1, suffix: "", pasywka: true, ulepszenie: true, opis: "Może być użyte raz na grę. Po śmiertelnych obrażeniach unieruchamia wrogów na 3s, przywraca 75% PŻ i daje odporność." },
   { nazwa: "Dodatkowe PŻ: 4000", min: 4000, max: 4000, suffix: "", ulepszenie: true },
-  { nazwa: "Prędkość ataku: +20%", min: 20, max: 20, suffix: "%", ulepszenie: true },
+  { nazwa: "Prędkość ataku: +35%", min: 35, max: 35, suffix: "%", ulepszenie: true },
   { nazwa: "Pancerz: 35", min: 35, max: 35, suffix: "", ulepszenie: true },
   { nazwa: "Szansa na kryta: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na przeszywkę: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na otrucie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na omdlenie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Wartość ataku: +150", min: 150, max: 150, suffix: "", ulepszenie: true },
+  { nazwa: "Obrażenia obszarowe", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "33% szansy na Obrażenia obszarowe" },
 
   { 
     nazwa: "Zwykła strzała", 
@@ -261,7 +263,7 @@ const affixy = [
   }
 ];
 
-const SZANSA_PIERWOTNY = 0.05;
+const SZANSA_PIERWOTNY = 0.025;
 const MNOZNIK_PRZESZYWKI = 1.6667;
 const ROZRZUT_PODSTAWOWYCH_OBRAZEN = 185;
 const TRUCIZNA_LICZBA_ATAKOW = 3;
@@ -275,7 +277,7 @@ const ITEM_STRZALA = 12;
 
 const PROGI_ODBLOKOWANIA_ITEMOW = [50, 100, 150, 200, 250];
 const PROGI_ODBLOKOWANIA_AFFIXOW = [55, 105, 155, 205];
-const SZANSA_ZMIANKA_Z_MOBA = 0.20;
+const SZANSA_ZMIANKA_Z_MOBA = 0.15;
 const PROG_FALI_ARCYBOSSA = 100;
 
 function pustePodsumowanie() {
