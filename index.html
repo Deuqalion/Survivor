@@ -47,6 +47,59 @@
         </div>
         <span id="survivor-info" class="survivor-info"></span>
       </div>
+
+      <!-- ===== EKRAN PORAŻKI (tylko nad areną) ===== -->
+      <div id="porazka-overlay" aria-hidden="true">
+        <div class="porazka-okno">
+          <div id="por-tytul" class="porazka-tytul">Porażka</div>
+          <div class="porazka-ozdoba"><span>✦</span></div>
+
+          <div class="porazka-etykieta">ZADANE OBRAŻENIA:</div>
+          <div id="por-suma" class="porazka-suma">0</div>
+
+          <div class="porazka-blok">
+            <div class="porazka-etykieta">LICZBA ATAKÓW:</div>
+            <div id="por-ataki" class="porazka-wartosc">0</div>
+            <div class="porazka-kolumny">
+              <div class="porazka-komorka"><span id="por-kryty" class="porazka-liczba">0</span> <span id="por-kryty-p" class="porazka-procent">(0%)</span> krytów</div>
+              <div class="porazka-komorka"><span id="por-przeszywki" class="porazka-liczba">0</span> <span id="por-przeszywki-p" class="porazka-procent">(0%)</span> przeszywek</div>
+            </div>
+          </div>
+
+          <div class="porazka-kolumny">
+            <div class="porazka-komorka">
+              <div class="porazka-etykieta">TRUCIE:</div>
+              <div id="por-trucizna" class="porazka-wartosc">0</div>
+            </div>
+            <div class="porazka-komorka">
+              <div class="porazka-etykieta">KRWAWIENIE:</div>
+              <div id="por-krwawienie" class="porazka-wartosc">0</div>
+            </div>
+          </div>
+
+          <div class="porazka-kolumny">
+            <div class="porazka-komorka">
+              <div class="porazka-etykieta">OMDLIŁEŚ:</div>
+              <div id="por-omdlenia" class="porazka-wartosc">0 razy</div>
+            </div>
+            <div class="porazka-komorka">
+              <div class="porazka-etykieta">WYLECZYŁEŚ:</div>
+              <div id="por-wyleczono" class="porazka-wartosc">0 PŻ</div>
+              <div class="porazka-procent">kradzież życia + regeneracja</div>
+            </div>
+          </div>
+
+          <div class="porazka-chipy">
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">CZAS GRY</span><span id="por-czas">00:00</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">ZABICI</span><span id="por-zabici">0</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">ARCYBOSSY</span><span id="por-arcybossy">0</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">NAJSILNIEJSZY CIOS</span><span id="por-cios">0</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">ZABLOKOWANE</span><span id="por-bloki">0</span></div>
+          </div>
+
+          <div class="porazka-podpowiedz">Kliknij START, aby zagrać ponownie</div>
+        </div>
+      </div>
     </section>
 
     <!-- ================= DOLNY PASEK: PRZYCISKI ================= -->

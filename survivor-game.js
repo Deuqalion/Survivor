@@ -979,6 +979,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
   if (!staty1) return;
 
   if (losujProcent() < (staty1.blok || 0)) {
+    rundaStaty.bloki += 1;
     log("🔰 BLOKUJESZ atak wroga! (0 obrażeń)", "log-blok");
     // Unoszący się napis nad postacią — tak jak liczby obrażeń (efekt "tekst")
     efekty.push({
@@ -1004,6 +1005,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
   const dmg = Math.round(dmgBazowe * redukcja);
 
   postac.hp = Math.max(0, postac.hp - dmg);
+  rundaStaty.otrzymane += dmg;
   if (dmg > 0) blyskObrazenMs = CZAS_BLYSKU_OBRAZEN_MS;
   aktualizujPasekPostaci();
 
@@ -1038,7 +1040,9 @@ function aktualizujRegeneracjePz(dtMs) {
   if (licznikRegeneracjiMs >= 1000) {
     licznikRegeneracjiMs = 0;
     const leczenie = Math.round(postac.maxHp * (staty1.regeneracjaPzSek / 100));
+    const hpPrzedRegen = postac.hp;
     postac.hp = Math.min(postac.maxHp, postac.hp + leczenie);
+    rundaStaty.wyleczono += postac.hp - hpPrzedRegen;
     aktualizujPasekPostaci();
   }
 }
@@ -1108,6 +1112,12 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   cel.hp -= dmg;
 
+  rundaStaty.obrazenia += dmg;
+  rundaStaty.ataki += 1;
+  if (kryt) rundaStaty.kryty += 1;
+  if (przeszywkaAktywna) rundaStaty.przeszywki += 1;
+  if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
+
   let dmgWyswietlany = dmg;
   let dmgTrucizny = 0;
   if (truciznaAktywna) {
@@ -1115,6 +1125,8 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     dmgTrucizny = Math.max(0, dmg - dmgBezTrucizny);
     if (dmgTrucizny > 0) dmgWyswietlany = dmgBezTrucizny;
   }
+
+  rundaStaty.trucizna += dmgTrucizny;
 
   dodajEfektAtaku(cel.x, cel.y, dmgWyswietlany, {
     dmgTrucizny,
@@ -1126,13 +1138,18 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   if ((staty1.kradziezZycia || 0) > 0) {
     const skradzione = Math.round(dmg * staty1.kradziezZycia / 100);
+    const hpPrzed = postac.hp;
     postac.hp = Math.min(postac.maxHp, postac.hp + skradzione);
+    rundaStaty.wyleczono += postac.hp - hpPrzed;
     aktualizujPasekPostaci();
   }
 
   if (losujProcent() < (staty1.otrucie || 0)) cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
   // ARCYBOSSY są odporne na omdlenie (zwykłe moby i Bossy nie).
-  if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) cel.ogluszonyDoCzasu = performance.now() + CZAS_OGLUSZENIA_MS;
+  if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) {
+    cel.ogluszonyDoCzasu = performance.now() + CZAS_OGLUSZENIA_MS;
+    rundaStaty.omdlenia += 1;
+  }
   if (losujProcent() < (staty1.krwawienie || 0)) {
     // Pierwszy tik dopiero po 0,5s (tylko gdy nie krwawił już wcześniej —
     // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
@@ -1187,6 +1204,7 @@ function sprobujObrazenObszarowych(cel, dmg, staty1) {
     const dmgPoPancerzu = Math.round(dmgWybuchu * redukcja * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
 
     wrog.hp -= dmgPoPancerzu;
+    rundaStaty.obrazenia += dmgPoPancerzu;
     dodajEfektAtaku(wrog.x, wrog.y, dmgPoPancerzu, { xZrodla: cel.x, yZrodla: cel.y });
     if (wrog.hp <= 0) zabijWroga(wrog);
   });
@@ -1210,6 +1228,7 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
       const dmgPoPancerzu = Math.round(dmgOgnia * redukcja * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
 
       wrog.hp -= dmgPoPancerzu;
+      rundaStaty.obrazenia += dmgPoPancerzu;
       dodajEfektAtaku(wrog.x, wrog.y, dmgPoPancerzu, { xZrodla: cel.x, yZrodla: cel.y });
       if (wrog.hp <= 0) zabijWroga(wrog);
     });
@@ -1336,6 +1355,8 @@ function aktualizujKrwawienieWrogow(teraz) {
     const procentTiku = KRWAWIENIE_TIK_PROCENT_HP + (wzmocnienieKrwawienia / 100) * (CZAS_TIKU_KRWAWIENIA_MS / 1000);
     const dmg = Math.round(wrog.maxHp * procentTiku * mnoznikOdpornosci);
     wrog.hp -= dmg;
+    rundaStaty.obrazenia += dmg;
+    rundaStaty.krwawienie += dmg;
 
     dodajEfektAtaku(wrog.x, wrog.y, dmg, { krwawienie: true, xZrodla: wrog.x, yZrodla: wrog.y });
     if (wrog.hp <= 0) zabijWroga(wrog);
@@ -1748,6 +1769,8 @@ function rozpocznijGre() {
   numerFaliArcybossa = 0;
   czasDoSpawnu = 500;
   czasGryMs = 0;
+  rundaStaty = nowaRundaStaty();
+  ukryjEkranKoncowy();
   blyskObrazenMs = 0;
   aktualizujCzasGry();
   czasDoAtakuGracza = pobierzCzasAtakuGracza();
@@ -1794,6 +1817,106 @@ function przelaczPauze() {
   }
 }
 
+/* ============================================================
+   EKRAN KOŃCA GRY (Porażka / Zwycięstwo) — tylko na obszarze areny
+   ============================================================ */
+
+let rundaStaty = nowaRundaStaty();
+let animacjaEkranuKoncowegoId = 0;
+
+function nowaRundaStaty() {
+  return {
+    obrazenia: 0,        // suma wszystkich zadanych obrażeń
+    ataki: 0,            // liczba trafień (strzały + ogniwa łańcucha)
+    kryty: 0,
+    przeszywki: 0,
+    trucizna: 0,         // dodatkowe obrażenia z trucizny
+    krwawienie: 0,       // obrażenia z tików krwawienia
+    omdlenia: 0,         // ile razy ogłuszyłeś wroga
+    wyleczono: 0,        // kradzież życia + regeneracja
+    najwiekszyCios: 0,
+    bloki: 0,
+    otrzymane: 0
+  };
+}
+
+function fmtLiczbaPL(n) {
+  return Math.round(n || 0).toLocaleString("pl-PL");
+}
+
+function fmtProcentOd(czesc, calosc) {
+  if (!calosc) return "0%";
+  return `${(czesc / calosc * 100).toFixed(1).replace(".", ",")}%`;
+}
+
+function animujLiczbeEkranu(el, wartosc, czasMs, opoznienieMs, token) {
+  if (!el) return;
+  el.textContent = "0";
+  const start = performance.now() + opoznienieMs;
+  function krok(teraz) {
+    if (token !== animacjaEkranuKoncowegoId) return; // przerwane (nowa gra)
+    const t = Math.max(0, Math.min(1, (teraz - start) / czasMs));
+    const ease = 1 - Math.pow(1 - t, 3);
+    el.textContent = fmtLiczbaPL(wartosc * ease);
+    if (t < 1) requestAnimationFrame(krok);
+    else el.textContent = fmtLiczbaPL(wartosc);
+  }
+  requestAnimationFrame(krok);
+}
+
+function ustawTekstEkranu(id, tekst) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = tekst;
+}
+
+function pokazEkranKoncowy(wygrana) {
+  const overlay = document.getElementById("porazka-overlay");
+  if (!overlay) return;
+
+  const rs = rundaStaty;
+  animacjaEkranuKoncowegoId += 1;
+  const token = animacjaEkranuKoncowegoId;
+
+  ustawTekstEkranu("por-tytul", wygrana ? "Zwycięstwo" : "Porażka");
+  overlay.classList.toggle("wygrana", !!wygrana);
+
+  ustawTekstEkranu("por-kryty", fmtLiczbaPL(rs.kryty));
+  ustawTekstEkranu("por-kryty-p", `(${fmtProcentOd(rs.kryty, rs.ataki)})`);
+  ustawTekstEkranu("por-przeszywki", fmtLiczbaPL(rs.przeszywki));
+  ustawTekstEkranu("por-przeszywki-p", `(${fmtProcentOd(rs.przeszywki, rs.ataki)})`);
+  ustawTekstEkranu("por-trucizna", fmtLiczbaPL(rs.trucizna));
+  ustawTekstEkranu("por-krwawienie", fmtLiczbaPL(rs.krwawienie));
+  ustawTekstEkranu("por-omdlenia", `${fmtLiczbaPL(rs.omdlenia)} ${rs.omdlenia === 1 ? "raz" : "razy"}`);
+  ustawTekstEkranu("por-wyleczono", `${fmtLiczbaPL(rs.wyleczono)} PŻ`);
+
+  ustawTekstEkranu("por-czas", formatCzasuGry(czasGryMs));
+  ustawTekstEkranu("por-zabici", fmtLiczbaPL(liczbaZabitych));
+  ustawTekstEkranu("por-arcybossy", fmtLiczbaPL(arcybossyPokonane));
+  ustawTekstEkranu("por-cios", fmtLiczbaPL(rs.najwiekszyCios));
+  ustawTekstEkranu("por-bloki", fmtLiczbaPL(rs.bloki));
+
+  // Liczby „nabijają się" od zera, gdy okno już się pojawi
+  animujLiczbeEkranu(document.getElementById("por-suma"), rs.obrazenia, 1400, 700, token);
+  animujLiczbeEkranu(document.getElementById("por-ataki"), rs.ataki, 1000, 900, token);
+
+  // restart animacji CSS przy kolejnej porażce
+  overlay.classList.remove("visible");
+  void overlay.offsetWidth;
+  overlay.classList.add("visible");
+  overlay.setAttribute("aria-hidden", "false");
+  if (canvas) canvas.classList.add("porazka-przygaszona");
+}
+
+function ukryjEkranKoncowy() {
+  animacjaEkranuKoncowegoId += 1;
+  const overlay = document.getElementById("porazka-overlay");
+  if (overlay) {
+    overlay.classList.remove("visible");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  if (canvas) canvas.classList.remove("porazka-przygaszona");
+}
+
 function zakonczGre(wygrana) {
   graTrwa = false;
   graWToku = false;
@@ -1805,6 +1928,7 @@ function zakonczGre(wygrana) {
   }
 
   log(wygrana ? "🏆 WYGRANA!" : "💀 PRZEGRANA — polegasz na arenie.", "log-zwyciestwo");
+  pokazEkranKoncowy(wygrana);
 }
 
 function inicjalizujSurvivora() {
