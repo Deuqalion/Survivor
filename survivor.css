@@ -710,6 +710,9 @@ body { transform: none; }
 
 .porazka-blok { margin-top: 12px; }
 
+/* odstęp między krytami/przeszywkami a TRUCIE/KRWAWIENIE */
+.porazka-blok + .porazka-kolumny { margin-top: 28px; }
+
 .porazka-wartosc {
   font-size: 38px;
   font-weight: bold;
