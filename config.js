@@ -204,7 +204,7 @@ const affixy = [
   { nazwa: "Szansa na otrucie", min: 1, max: 3, suffix: "%" },
   { nazwa: "Szansa na krwawienie", min: 1, max: 3, suffix: "%" },
   { nazwa: "Dodatkowe PŻ", min: 1500, max: 4000, suffix: "" },
-  { nazwa: "Wartość ataku", min: 50, max: 400, suffix: "" },
+  { nazwa: "Wartość ataku", min: 60, max: 500, suffix: "" },
   { nazwa: "Pancerz", min: 5, max: 34, suffix: "" },
   { nazwa: "Kradzież życia", min: 1, max: 10, suffix: "%" },
   { nazwa: "Wzmocnienie PŻ", min: 0, max: 20, suffix: "%" },

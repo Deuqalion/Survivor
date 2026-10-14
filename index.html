@@ -62,18 +62,23 @@
       <!-- ===== EKRAN PORAŻKI (tylko nad areną) ===== -->
       <div id="porazka-overlay" aria-hidden="true">
         <div class="porazka-okno">
-          <div id="por-tytul" class="porazka-tytul">Zginąłeś</div>
+          <div id="por-tytul" class="porazka-tytul">ZGINĄŁEŚ</div>
           <div class="porazka-ozdoba"><span>✦</span></div>
 
           <div class="porazka-etykieta">ZADANE OBRAŻENIA:</div>
           <div id="por-suma" class="porazka-suma">0</div>
+          <div class="porazka-podzial"><span><span id="por-fiz" class="porazka-fiz">0</span> <span id="por-fiz-p" class="porazka-procent">(0%)</span></span><span><span id="por-mag" class="porazka-mag">0</span> <span id="por-mag-p" class="porazka-procent">(0%)</span></span></div>
 
           <div class="porazka-blok">
-            <div class="porazka-etykieta">LICZBA ATAKÓW:</div>
-            <div id="por-ataki" class="porazka-wartosc">0</div>
             <div class="porazka-kolumny">
-              <div class="porazka-komorka"><span id="por-kryty" class="porazka-liczba">0</span> <span id="por-kryty-p" class="porazka-procent">(0%)</span> krytów</div>
-              <div class="porazka-komorka"><span id="por-przeszywki" class="porazka-liczba">0</span> <span id="por-przeszywki-p" class="porazka-procent">(0%)</span> przeszywek</div>
+              <div class="porazka-komorka">
+                <div class="porazka-etykieta">KRYTY:</div>
+                <div class="porazka-wartosc"><span id="por-kryty">0</span> <span id="por-kryty-p" class="porazka-procent">(0%)</span></div>
+              </div>
+              <div class="porazka-komorka">
+                <div class="porazka-etykieta">PRZESZYWKI:</div>
+                <div class="porazka-wartosc"><span id="por-przeszywki">0</span> <span id="por-przeszywki-p" class="porazka-procent">(0%)</span></div>
+              </div>
             </div>
           </div>
 
@@ -100,9 +105,10 @@
           </div>
 
           <div class="porazka-chipy">
-            <div class="porazka-chip"><span class="porazka-chip-nazwa">CZAS GRY</span><span id="por-czas">00:00</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">LICZBA ATAKÓW</span><span id="por-ataki">0</span></div>
             <div class="porazka-chip"><span class="porazka-chip-nazwa">ZABICI</span><span id="por-zabici">0</span></div>
             <div class="porazka-chip"><span class="porazka-chip-nazwa">ARCYBOSSY</span><span id="por-arcybossy">0</span></div>
+            <div class="porazka-chip"><span class="porazka-chip-nazwa">CZAS GRY</span><span id="por-czas">00:00</span></div>
             <div class="porazka-chip"><span class="porazka-chip-nazwa">NAJSILNIEJSZY CIOS</span><span id="por-cios">0</span></div>
             <div class="porazka-chip"><span class="porazka-chip-nazwa">ZABLOKOWANE</span><span id="por-bloki">0</span></div>
           </div>

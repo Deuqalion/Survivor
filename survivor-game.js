@@ -85,6 +85,7 @@ const DMG_STYL_PRZESZYWKA = { kolor: "#c9c9c9", rozmiar: 17 };
 const DMG_STYL_KRYT = { kolor: "#ffd700", rozmiar: 20 };
 const DMG_STYL_KRYT_PRZESZYWKA = { kolor: "#ff3b3b", rozmiar: 25 };
 const DMG_STYL_KRWAWIENIE = { kolor: "#ff5555", rozmiar: 14 };
+const DMG_STYL_MAGIA = { kolor: "#6ec8ff", rozmiar: 16 };
 
 const canvas = document.getElementById("gra-canvas");
 const ctx = canvas.getContext("2d");
@@ -274,9 +275,11 @@ function otworzOknoUlepszeniaItemu() {
     overlay = document.createElement("div");
     overlay.id = "wybor-ulepszenia-overlay";
     overlay.innerHTML = `
-      <div class="ulepszenie-okno-kontener">
+      <div class="ulepszenie-uklad">
         <div class="ulepszenie-tytul">ULEPSZ PRZEDMIOT</div>
-        <div id="ulepszenie-grid"></div>
+        <div class="ulepszenie-okno-kontener">
+          <div id="ulepszenie-grid"></div>
+        </div>
       </div>
     `;
     document.querySelector(".survivor-canvas-wrap").appendChild(overlay);
@@ -512,7 +515,7 @@ function czasSpawnuMs() {
   // (x=4 -> 900 ms, x=5 -> ~849,85 ms, ...).
   const x = Math.max(arcybossyPokonane, rekordArcybossowDlaSpawnu);
   return x >= ARCYBOSSY_DO_ULEPSZENIA
-    ? CZAS_SPAWNU_MS / (1 + Math.sqrt(x / 4))
+    ? CZAS_SPAWNU_MS / (1 + Math.pow(x / 4, 0.75))
     : CZAS_SPAWNU_MS;
 }
 
@@ -1094,7 +1097,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     podstObrazenia + ROZRZUT_PODSTAWOWYCH_OBRAZEN
   );
 
-  const dmgBazowe = (losowePodstawoweObrazenia + (staty1.wartoscAtaku || 0) + bonusObrazenZZabojstw()) * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
+  const dmgBazowe = (losowePodstawoweObrazenia + (staty1.wartoscAtaku || 0) + bonusObrazenZZabojstw());
 
   const truciznaAktywna = cel.zatruteAtaki > 0;
   if (truciznaAktywna) cel.zatruteAtaki -= 1;
@@ -1167,6 +1170,28 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   return dmg;
 }
 
+/* Atak MAGICZNY (umiejętności): Podstawowe obrażenia + zabici, razy
+   (1 + Obrażenia umiejętności %). Ignoruje pancerz, nie krytuje, nie
+   przeszywa, nie nakłada trucizny/krwawienia/omdlenia i nie kradnie życia.
+   Odporność moba (redukcja obrażeń) nadal działa. */
+function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla) {
+  if (!cel || cel.hp <= 0) return 0;
+
+  const baza = (staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw();
+  const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
+  const dmg = Math.round(dmgBazowe * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+
+  cel.hp -= dmg;
+  rundaStaty.obrazenia += dmg;
+  rundaStaty.magiczne += dmg;
+  if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
+
+  dodajEfektAtaku(cel.x, cel.y, dmg, { magia: true, xZrodla, yZrodla });
+
+  if (cel.hp <= 0) zabijWroga(cel);
+  return dmg;
+}
+
 function atakGracza() {
   if (!graTrwa) return;
   const staty1 = stan[1].staty;
@@ -1206,12 +1231,13 @@ function sprobujObrazenObszarowych(cel, dmg, staty1) {
 
     const dmgWybuchu = Math.round(dmg * mnoznikWybuchu);
     if (dmgWybuchu <= 0) return;
-    const redukcja = 100 / (100 + wrog.pancerz);
-    const dmgPoPancerzu = Math.round(dmgWybuchu * redukcja * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+    // Obrażenia magiczne — pancerz nie działa.
+    const dmgMagiczne = Math.round(dmgWybuchu * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
 
-    wrog.hp -= dmgPoPancerzu;
-    rundaStaty.obrazenia += dmgPoPancerzu;
-    dodajEfektAtaku(wrog.x, wrog.y, dmgPoPancerzu, { xZrodla: cel.x, yZrodla: cel.y });
+    wrog.hp -= dmgMagiczne;
+    rundaStaty.obrazenia += dmgMagiczne;
+    rundaStaty.magiczne += dmgMagiczne;
+    dodajEfektAtaku(wrog.x, wrog.y, dmgMagiczne, { magia: true, xZrodla: cel.x, yZrodla: cel.y });
     if (wrog.hp <= 0) zabijWroga(wrog);
   });
 }
@@ -1247,7 +1273,7 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
-      const dmgOgniwa = wykonajPojedynczyAtak(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y);
+      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y);
       sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
     }
@@ -1529,7 +1555,10 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
   let styl;
   let prefix = "";
 
-  if (opcje.krwawienie) {
+  if (opcje.magia) {
+    styl = DMG_STYL_MAGIA;
+    prefix = "✨";
+  } else if (opcje.krwawienie) {
     styl = DMG_STYL_KRWAWIENIE;
     prefix = "🩸";
   } else if (opcje.kryt && opcje.przeszywka) {
@@ -1909,7 +1938,8 @@ function nowaRundaStaty() {
     wyleczono: 0,        // kradzież życia + regeneracja
     najwiekszyCios: 0,
     bloki: 0,
-    otrzymane: 0
+    otrzymane: 0,
+    magiczne: 0          // część "obrazenia" zadana jako obrażenia magiczne (reszta = fizyczne)
   };
 }
 
@@ -1952,6 +1982,13 @@ function pokazEkranKoncowy(wygrana) {
 
   ustawTekstEkranu("por-tytul", wygrana ? "Zwycięstwo" : "Zginąłeś");
   overlay.classList.toggle("wygrana", !!wygrana);
+
+  const magiczne = rs.magiczne || 0;
+  const fizyczne = Math.max(0, rs.obrazenia - magiczne);
+  ustawTekstEkranu("por-fiz", fmtLiczbaPL(fizyczne));
+  ustawTekstEkranu("por-fiz-p", `(${fmtProcentOd(fizyczne, rs.obrazenia)})`);
+  ustawTekstEkranu("por-mag", fmtLiczbaPL(magiczne));
+  ustawTekstEkranu("por-mag-p", `(${fmtProcentOd(magiczne, rs.obrazenia)})`);
 
   ustawTekstEkranu("por-kryty", fmtLiczbaPL(rs.kryty));
   ustawTekstEkranu("por-kryty-p", `(${fmtProcentOd(rs.kryty, rs.ataki)})`);
