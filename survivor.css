@@ -116,7 +116,7 @@ body { transform: none; }
   top: 4px;
   width: 1492px;
   height: 985px;
-  background: #0a1330;
+  background: #0a1330 url("arena.jpg") center / cover no-repeat;
   overflow: hidden;
 }
 

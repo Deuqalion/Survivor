@@ -1584,9 +1584,8 @@ function rysujGre() {
   if (!canvas.width || !canvas.height) return;
   const teraz = performance.now();
 
+  // Tło areny (arena.jpg) jest ustawione w CSS na .survivor-canvas-wrap — canvas tylko czyścimy.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = KOLOR_ARENY;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.beginPath();
   ctx.arc(postac.x, postac.y, 20, 0, Math.PI * 2);
