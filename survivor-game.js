@@ -65,7 +65,7 @@ const PROMIEN_TRAFIENIA_STRZALY = 14;
 const WZROST_DMG_NA_PRZEBICIE = 0.15;
 const COOLDOWN_ATAKU_WROGA_MS = 1100;
 const BAZOWA_PREDKOSC_GRACZA = 180;
-const CZAS_OGLUSZENIA_MS = 2500;
+const CZAS_OGLUSZENIA_MS = 1800;
 const PROMIEN_OGNIA = 110;
 const SZANSA_PROCKA_STRZALY = 33;
 const CZAS_TRWANIA_WYBUCHU_MS = 350;
@@ -501,12 +501,18 @@ function interwalFaliArcybossa() {
     : PROG_FALI_ARCYBOSSA;
 }
 
+/* Najwięcej Arcybossów pokonanych w jednej grze od załadowania strony.
+   Czas spawnu zostaje na tym poziomie po śmierci/restarcie (jak odblokowane
+   itemy) — resetuje się dopiero po odświeżeniu strony. */
+let rekordArcybossowDlaSpawnu = 0;
+
 function czasSpawnuMs() {
   // Do 3 pokonanych Arcybossów: stałe 1800 ms. Od 4. działa wzór
   // 1800 / (1 + sqrt(x / 4)), gdzie x = liczba pokonanych Arcybossów
   // (x=4 -> 900 ms, x=5 -> ~849,85 ms, ...).
-  return arcybossyPokonane >= ARCYBOSSY_DO_ULEPSZENIA
-    ? CZAS_SPAWNU_MS / (1 + Math.sqrt(arcybossyPokonane / 4))
+  const x = Math.max(arcybossyPokonane, rekordArcybossowDlaSpawnu);
+  return x >= ARCYBOSSY_DO_ULEPSZENIA
+    ? CZAS_SPAWNU_MS / (1 + Math.sqrt(x / 4))
     : CZAS_SPAWNU_MS;
 }
 
@@ -1282,6 +1288,7 @@ function zabijWroga(wrog) {
   if (wrog.typ === "arcyboss") {
     log("🏆 ARCYBOSS pokonany!", "log-zwyciestwo");
     arcybossyPokonane += 1;
+    rekordArcybossowDlaSpawnu = Math.max(rekordArcybossowDlaSpawnu, arcybossyPokonane);
 
     if (arcybossyPokonane === ARCYBOSSY_DO_ULEPSZENIA) {
       nastepnyProgArcybossa += PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU - PROG_FALI_ARCYBOSSA;
@@ -1619,6 +1626,14 @@ function rysujGre() {
       else rysujKolceOdpornego(wrog.x, wrog.y, promien);
     }
 
+    if (wrog.id === wybranyWrogId) {
+      ctx.beginPath();
+      ctx.arc(wrog.x, wrog.y, promien * (trojkat ? MNOZNIK_ROZMIARU_TROJKATA : 1) + 8, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ff4d4d";
+      ctx.stroke();
+    }
+
     const szerokoscPaska = promien * 2;
     const x0 = wrog.x - promien;
     const y0 = wrog.y - promien - 10;
@@ -1715,6 +1730,64 @@ function rysujGre() {
   }
 }
 
+/* ============================================================
+   PANEL WYBRANEGO WROGA (klik LPM na wroga) — pasek PŻ + pancerz
+   ============================================================ */
+
+let wybranyWrogId = null;
+
+const NAZWY_TYPOW_WROGOW = {
+  melee: "Wróg",
+  ranged: "Wróg dystansowy",
+  boss: "BOSS",
+  arcyboss: "ARCYBOSS"
+};
+
+function aktualizujPanelWroga() {
+  const panel = document.getElementById("wrog-panel");
+  if (!panel) return;
+
+  const wrog = wybranyWrogId === null ? null : wrogowie.find(w => w.id === wybranyWrogId && w.hp > 0);
+  if (!wrog) {
+    wybranyWrogId = null;
+    panel.classList.remove("visible");
+    return;
+  }
+
+  const procent = wrog.maxHp > 0 ? Math.max(0, Math.min(100, (wrog.hp / wrog.maxHp) * 100)) : 0;
+  document.getElementById("wrog-hp-fill").style.width = `${procent}%`;
+  document.getElementById("wrog-hp-tekst").textContent = `${fmtLiczbaPL(Math.max(0, wrog.hp))} / ${fmtLiczbaPL(wrog.maxHp)}`;
+  document.getElementById("wrog-nazwa").textContent = (NAZWY_TYPOW_WROGOW[wrog.typ] || "Wróg") + (wrog.odporny ? " (odporny)" : "");
+  document.getElementById("wrog-pancerz").textContent = fmtLiczbaPL(wrog.pancerz);
+  panel.classList.add("visible");
+}
+
+canvas.addEventListener("mousedown", event => {
+  if (event.button !== 0) return;
+
+  // Canvas jest skalowany razem ze sceną — przelicz pozycję kliknięcia na piksele canvasa.
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const mx = (event.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+  let wybrany = null;
+  let najmniejszyDystans = Infinity;
+  wrogowie.forEach(wrog => {
+    if (wrog.hp <= 0) return;
+    const d = Math.hypot(mx - wrog.x, my - wrog.y);
+    const zasiegKlikniecia = promienWroga(wrog) * (wrog.typ === "ranged" ? MNOZNIK_ROZMIARU_TROJKATA : 1) + 8;
+    if (d <= zasiegKlikniecia && d < najmniejszyDystans) {
+      najmniejszyDystans = d;
+      wybrany = wrog;
+    }
+  });
+
+  wybranyWrogId = wybrany ? wybrany.id : null;
+  aktualizujPanelWroga();
+  rysujGre();
+});
+
 function petlaGry(teraz) {
   if (!graTrwa) return;
 
@@ -1744,6 +1817,7 @@ function petlaGry(teraz) {
   aktualizujPociski(dtMs);
   aktualizujPociskiGracza(dtMs);
   aktualizujEfekty(dtMs);
+  aktualizujPanelWroga();
 
   rysujGre();
   requestAnimationFrame(petlaGry);
@@ -1876,7 +1950,7 @@ function pokazEkranKoncowy(wygrana) {
   animacjaEkranuKoncowegoId += 1;
   const token = animacjaEkranuKoncowegoId;
 
-  ustawTekstEkranu("por-tytul", wygrana ? "Zwycięstwo" : "Porażka");
+  ustawTekstEkranu("por-tytul", wygrana ? "Zwycięstwo" : "Zginąłeś");
   overlay.classList.toggle("wygrana", !!wygrana);
 
   ustawTekstEkranu("por-kryty", fmtLiczbaPL(rs.kryty));
