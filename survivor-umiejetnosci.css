@@ -1,0 +1,208 @@
+/* ============================================================
+   OKNO "UMIEJĘTNOŚCI PASYWNE"
+   Grafika tła: umiejetnosci-podglad.png (te same proporcje co wiki: 5:3).
+   Wszystkie rozmiary czcionek w cqw — skalują się razem z oknem.
+   ============================================================ */
+
+#umiejetnosci-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: brightness(0.42);
+}
+
+#umiejetnosci-overlay.visible { display: flex; }
+
+#umiejetnosci-okno {
+  /* Jedyne miejsce z nazwą pliku tła — używa go też szara nakładka ikon. */
+  --umiej-tlo: url("umiejetnosci-podglad.png");
+
+  position: relative;
+  width: min(94vw, 1500px, calc(88vh * 1.6666667));
+  aspect-ratio: 5 / 3;
+  container-type: inline-size;
+  background: var(--umiej-tlo) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 12px 35px rgba(0, 0, 0, 0.9));
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.umiej-tytul {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2.2%;
+  margin: 0;
+  text-align: center;
+  color: #ffd700;
+  font-size: 2.7cqw;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.35);
+}
+
+.umiej-monety {
+  position: absolute;
+  right: 4%;
+  top: 2%;
+  display: flex;
+  align-items: center;
+  gap: 0.5cqw;
+  font-size: 2.6cqw;
+  font-weight: bold;
+  line-height: 1;
+  color: #ffd700;
+  text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.umiej-monety.brak { animation: umiejBrak 0.35s ease; }
+
+.umiej-nazwa {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffd700;
+  font-size: 2.1cqw;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.3);
+  pointer-events: none;
+}
+
+/* ---------- okrągłe ikony (duże i małe z cyframi) ---------- */
+
+.umiej-ikona,
+.umiej-poziom {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Szara nakładka: ten sam fragment grafiki tła, tylko w odcieniach szarości.
+   Parametry --bsx/--bsy/--bpx/--bpy ustawia JS (stylKola). */
+.umiej-ikona::before,
+.umiej-poziom::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image: var(--umiej-tlo);
+  background-repeat: no-repeat;
+  background-size: var(--bsx) var(--bsy);
+  background-position: var(--bpx) var(--bpy);
+  filter: grayscale(1) brightness(0.55);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.umiej-ikona.zablokowana::before,
+.umiej-poziom.zablokowana::before { opacity: 1; }
+
+.umiej-ikona:hover { box-shadow: 0 0 1.4cqw rgba(255, 215, 0, 0.55); }
+.umiej-poziom:hover { box-shadow: 0 0 0.9cqw rgba(255, 215, 0, 0.55); }
+
+.umiej-ikona.brak,
+.umiej-poziom.brak { animation: umiejBrak 0.35s ease; }
+
+/* "50🪙" na zablokowanej dużej ikonie */
+.umiej-ikona-koszt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.6cqw;
+  font-weight: bold;
+  color: #fff3c4;
+  text-shadow: 0 0 0.7cqw #000, 0.15cqw 0.25cqw 0.3cqw #000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.umiej-ikona.zablokowana .umiej-ikona-koszt { opacity: 1; }
+
+/* "50🪙" pod pierwszym niekupionym poziomem (I–IV) */
+.umiej-poziom-koszt {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 1cqw;
+  font-size: 1.8cqw;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #ffd700;
+  text-shadow: 0 0 0.5cqw #000, 0.12cqw 0.2cqw 0.25cqw #000;
+  pointer-events: none;
+}
+
+.umiej-poziom.nastepny .umiej-poziom-koszt { display: block; }
+
+/* ---------- opis w prostokątnym polu ---------- */
+
+.umiej-tekst {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.5cqw 0.8cqw;
+  overflow: hidden;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15cqw;
+  line-height: 1.25;
+  color: #2c1505;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.umiej-tekst.przygaszony { opacity: 0.55; }
+
+/* Wartość obrażeń: granat z lekką czarną obwódką */
+.umiej-dmg {
+  color: #17308f;
+  font-weight: bold;
+  -webkit-text-stroke: 0.05cqw #000;
+  paint-order: stroke fill;
+}
+
+/* ---------- przycisk ZAMKNIJ ---------- */
+
+.umiej-zamknij {
+  position: absolute;
+  left: 50%;
+  bottom: 2.2%;
+  transform: translateX(-50%);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.umiej-zamknij img {
+  display: block;
+  height: 3.6cqw;
+  width: auto;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.umiej-zamknij:hover img { filter: brightness(1.15); }
+.umiej-zamknij:active img { transform: translateY(1px); }
+
+@keyframes umiejBrak {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}

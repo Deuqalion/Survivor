@@ -515,7 +515,7 @@ function czasSpawnuMs() {
   // (x=4 -> 900 ms, x=5 -> ~849,85 ms, ...).
   const x = Math.max(arcybossyPokonane, rekordArcybossowDlaSpawnu);
   return x >= ARCYBOSSY_DO_ULEPSZENIA
-    ? CZAS_SPAWNU_MS / (1 + Math.pow(x / 4, 0.75))
+    ? CZAS_SPAWNU_MS / (1 + Math.sqrt(x / 4))
     : CZAS_SPAWNU_MS;
 }
 
@@ -673,6 +673,7 @@ window.addEventListener("keydown", event => {
   event.preventDefault();
   if (event.repeat) return;
   if (wikiOtwarta) return;
+  if (typeof umiejetnosciOtwarte !== "undefined" && umiejetnosciOtwarte) return;
   przelaczPauze();
 });
 

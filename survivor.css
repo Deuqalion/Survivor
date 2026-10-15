@@ -196,12 +196,44 @@ body { transform: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 36px;
+  gap: 18px;
 }
 
 .czas-wrap {
   position: relative;
   line-height: 0;
+}
+
+/* Przycisk prędkości gry (x1 / x1,5 / x2) — wygląda jak wyświetlacz czasu, ale klikany */
+.btn-predkosc {
+  position: relative;
+}
+
+/* Przycisk prędkości przysunięty do wyświetlacza czasu: odstęp 2 px
+   (gap paska to 18 px, więc -16px zostawia 2 px) */
+.btn-predkosc + .czas-wrap {
+  margin-left: -16px;
+}
+
+.btn-img.btn-predkosc img {
+  height: 40px;
+  width: auto; /* predkosc.png ma 332x158 px, czyli ok. 84x40 po przeskalowaniu */
+}
+
+.predkosc-tekst {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  font-weight: bold;
+  line-height: 1;
+  color: #2c1505;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(-2px);
 }
 
 .czas-wrap img {
