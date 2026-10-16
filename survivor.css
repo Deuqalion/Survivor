@@ -259,6 +259,37 @@ body { transform: none; }
   transform: translateY(-2px);
 }
 
+/* Licznik monet po prawej od przycisku Umiejętności */
+.monety-hud {
+  display: flex;
+  align-items: center;
+
+  /* Stała szerokość — pasek z przyciskami nie "pracuje" przy zmianie liczby cyfr */
+  width: 120px;
+  flex: 0 0 120px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: bold;
+  line-height: 1;
+  color: #ffd700;
+  text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.35);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  transform: translateX(-8px);
+}
+
+/* Ikona monety stoi w miejscu (przy przycisku PASYWKI), liczba rośnie w prawo */
+#monety-licznik {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.monety-ikona {
+  flex: 0 0 auto;
+}
+
 .btn-img {
   padding: 0;
   margin: 0;
@@ -270,7 +301,7 @@ body { transform: none; }
 
 .btn-img img {
   display: block;
-  height: 60px;
+  height: 55px;
   width: auto;
   transition: filter 0.15s, transform 0.1s;
 }

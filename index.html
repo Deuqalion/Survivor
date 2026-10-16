@@ -121,6 +121,10 @@
 
     <!-- ================= DOLNY PASEK: PRZYCISKI ================= -->
     <div class="pasek-przyciskow">
+      <button id="btn-predkosc-gry" class="btn-img btn-predkosc" type="button" onclick="przelaczPredkosc()" title="Prędkość gry">
+        <img src="predkosc.png" alt="Prędkość gry">
+        <span id="predkosc-tekst" class="predkosc-tekst">x1</span>
+      </button>
       <div class="czas-wrap">
         <img src="PUSTE.png" alt="">
         <span id="czas-gry" class="czas-gry">00:00</span>
@@ -135,8 +139,9 @@
         <img src="WIKI.png" alt="WIKI">
       </button>
       <button id="btn-extra-gry" class="btn-img" type="button" onclick="otworzUmiejetnosci()">
-        <img src="PUSTE.png" alt="">
+        <img src="PASYWKI.png" alt="">
       </button>
+      <div class="monety-hud"><span class="monety-ikona">🪙</span><span id="monety-licznik">0</span></div>
     </div>
 
   </div>

@@ -178,8 +178,7 @@ const itemy = {
     nazwa: "strzala",
     obraz: "strzala.png",
     pozycja: { kolumna: 1, wiersz: 1 },
-    // Pasywka "Zwykła strzała" jest stała; po ulepszeniu itemu zamienia się
-    // na "Elektryczna strzała" (patrz nazwaAffixuZUlepszenia w generator.js).
+    // Pasywka "Zwykła strzała" jest stała. Ulepszenie strzały daje 5% Kradzieży życia.
     staleAffixy: [ 
       "Wartość ataku",
       "Prędkość ataku",
@@ -227,7 +226,8 @@ const affixy = [
   { nazwa: "Szansa na otrucie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na omdlenie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
   { nazwa: "Wartość ataku: +150", min: 150, max: 150, suffix: "", ulepszenie: true },
-  { nazwa: "Obrażenia obszarowe", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "33% szansy na Obrażenia obszarowe" },
+  { nazwa: "Ulepszenie broni", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "Wartość ataku: +500, Obrażenia umiejętności: +5%" },
+  { nazwa: "Kradzież życia: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
 
   { 
     nazwa: "Zwykła strzała", 

@@ -30,12 +30,10 @@ const WYMUSZONE_AFFIXY_STARTOWE = {
   5: { nazwa: "Kradzież życia", wartosc: 10 }
 };
 
-/* Ulepszona strzała zamiast "Zwykła strzała" ma pasywkę "Elektryczna strzała". */
+/* Dawniej ulepszona strzała zamieniała "Zwykła strzała" na "Elektryczna strzała".
+   Teraz ulepszenie strzały daje 5% Kradzieży życia, więc nazwa zostaje bez zmian
+   (funkcję zostawiam, bo wołają ją generujAffixy i dodajJedenNowyAffix). */
 function nazwaAffixuZUlepszenia(itemId, nazwa) {
-  if (Number(itemId) === ITEM_STRZALA && nazwa === "Zwykła strzała" &&
-      typeof ulepszoneItemySet !== "undefined" && ulepszoneItemySet.has(ITEM_STRZALA)) {
-    return "Elektryczna strzała";
-  }
   return nazwa;
 }
 

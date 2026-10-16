@@ -38,6 +38,8 @@ const ARCYBOSS_DMG_MAX = 130000;
 const ARCYBOSS_POCISKI_PRZYROST = 2;
 const ARCYBOSS_POCISKI_MAX = 24;
 
+const UPG_BRON_WARTOSC_ATAKU = 500;   // ulepszenie broni: +500 Wartości ataku
+const UPG_BRON_OBR_UMIEJETNOSCI = 5;  // ulepszenie broni: +5% Obrażeń umiejętności
 const ARCYBOSSY_DO_ULEPSZENIA = 4;
 const PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU = 200;
 const MNOZNIK_CZASU_SPAWNU_PO_ULEPSZENIU = 0.5;
@@ -69,6 +71,14 @@ const CZAS_OGLUSZENIA_MS = 1800;
 const PROMIEN_OGNIA = 110;
 const SZANSA_PROCKA_STRZALY = 33;
 const CZAS_TRWANIA_WYBUCHU_MS = 350;
+
+/* Umiejętności pasywne w walce (poziomy i odblokowanie: survivor-umiejetnosci.js) */
+const OPOZNIENIE_MAGICZNEJ_MS = 130;                 // ułamek sekundy po ataku, z którego leci Magiczna strzała
+const PROMIEN_WYBUCHU_MAGICZNEJ = PROMIEN_OGNIA * 2; // 2x większy niż zwykły wybuch
+const KOLOR_WYBUCHU_MAGICZNEJ = "170, 70, 255";      // fiolet
+const KOLOR_WYBUCHU_OGNIA = "255, 140, 26";
+const KOLOR_LINII_ELEKTRYCZNEJ = "255, 215, 0";      // złoty
+const KOLOR_LINII_ZWYKLEJ = "220, 255, 220";
 
 const KOLOR_DOMYSLNY_WROGA = "#ffffff";
 const KOLOR_TRUCIZNA = "#4dff6a";
@@ -116,7 +126,17 @@ let nastepnyProgArcybossa = PROG_FALI_ARCYBOSSA;
 let arcybossyPokonane = 0;
 let numerFaliArcybossa = 0; // którą falę Arcybossa właśnie spawnujemy (1, 2, 3, ...)
 let wykorzystaneWskrzeszenie = false;
-let wskrzeszenieDoCzasu = 0; // performance.now() do kiedy trwa pulsowanie areny
+let wskrzeszenieDoCzasu = 0; // czasWirt() do kiedy trwa pulsowanie areny
+
+/* Zegar gry: idzie tylko gdy pętla działa i uwzględnia prędkość gry (x1 / x1,5 / x2).
+   Wszystkie czasy w logice (ogłuszenie, krwawienie, cooldowny wrogów, wskrzeszenie)
+   liczone są na nim, dzięki czemu przyspieszają razem z grą i stoją na pauzie. */
+let zegarGryMs = 0;
+let zaplanowaneAkcje = [];      // akcje opóźnione o ułamek sekundy (czas liczony zegarem gry)
+let licznikAtakowMagicznej = 0; // ile ataków minęło od ostatniej Magicznej strzały
+let mnoznikPredkosciGry = 1;
+const PREDKOSCI_GRY = [1, 1.5, 2];
+function czasWirt() { return zegarGryMs; }
 
 /* ============================================================
    FUNKCJA OBLICZANIA STATYSTYK GRACZA (ZABEZPIECZONA PRZED NaN)
@@ -179,7 +199,8 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Dodatkowe PŻ" || nazwa === "Dodatkowe PŻ: 4000") dodatkowePz += val;
       else if (nazwa === "Wartość ataku" || nazwa === "Wartość ataku: +150") wartoscAtaku += val;
       else if (nazwa === "Pancerz" || nazwa === "Pancerz: 35") pancerz += val;
-      else if (nazwa === "Kradzież życia") kradziezZycia += val;
+      else if (nazwa === "Kradzież życia" || nazwa === "Kradzież życia: 5%") kradziezZycia += val;
+      else if (nazwa === "Ulepszenie broni") { wartoscAtaku += UPG_BRON_WARTOSC_ATAKU; obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
@@ -243,7 +264,7 @@ function obliczStatystyki(gracz) {
    ============================================================ */
 
 const MAPA_ULEPSZEN_ITEMOW = {
-  "bron": "Obrażenia obszarowe",
+  "bron": "Ulepszenie broni",
   "buty": "Prędkość ruchu: +15%",
   "helm": "Regeneracja PŻ 5%/sek",
   "zbroja": "Wskrzeszenie",
@@ -254,7 +275,7 @@ const MAPA_ULEPSZEN_ITEMOW = {
   "naszyjnik": "Szansa na przeszywkę: 10%",
   "bransoleta": "Szansa na otrucie: 10%",
   "pierscien": "Szansa na omdlenie: 10%",
-  "strzala": "Elektryczna strzała"
+  "strzala": "Kradzież życia: 5%"
 };
 
 let oczekiwanieNaUlepszenieItemu = false;
@@ -307,7 +328,8 @@ function wypelnijSiatkeUlepszen() {
     el.className = `item ${czyUlepszony ? "zablokowany" : ""}`;
     el.style.gridColumn = item.pozycja.kolumna;
     el.style.gridRow = item.pozycja.wiersz;
-    el.setAttribute("data-tooltip-ulepszenia", nazwaAffixuUlepszenia || "Ulepszenie");
+    const defUlepszenia = nazwaAffixuUlepszenia ? znajdzAffix(nazwaAffixuUlepszenia) : null;
+    el.setAttribute("data-tooltip-ulepszenia", (defUlepszenia && defUlepszenia.tekstTooltip) || nazwaAffixuUlepszenia || "Ulepszenie");
     
     el.innerHTML = `
       <img src="${item.obraz}" alt="${item.nazwa}">
@@ -351,29 +373,22 @@ function wykonajUlepszenieItemu(itemId) {
   const nazwaAffixuUlepszenia = MAPA_ULEPSZEN_ITEMOW[item.nazwa];
   if (!nazwaAffixuUlepszenia) return;
 
-  if (item.nazwa === "strzala") {
-    // Strzała: ulepszenie ZASTĘPUJE pasywkę "Zwykła strzała" pasywką
-    // "Elektryczna strzała" (wartość 1–5 losowana jak zwykły affix).
-    ulepszoneItemySet.add(itemId);
-    zamienPasywkeStrzaly("Elektryczna strzała");
-  } else {
-    const definicja = znajdzAffix(nazwaAffixuUlepszenia);
-    if (!definicja) return;
+  const definicja = znajdzAffix(nazwaAffixuUlepszenia);
+  if (!definicja) return;
 
-    // Przechowywany OSOBNO od stan[1].wylosowane, żeby reroll (LOSUJ) tego
-    // itemu nigdy nie skasował affixu z ulepszenia.
-    stan[1].ulepszeniaAffixy[itemId] = {
-      nazwa: definicja.nazwa,
-      wartosc: definicja.max,
-      suffix: definicja.suffix || "",
-      pasywka: !!definicja.pasywka,
-      opis: definicja.opis || "",
-      tekst: definicja.tekstTooltip || "",
-      ulepszenie: true
-    };
+  // Przechowywany OSOBNO od stan[1].wylosowane, żeby reroll (LOSUJ) tego
+  // itemu nigdy nie skasował affixu z ulepszenia.
+  stan[1].ulepszeniaAffixy[itemId] = {
+    nazwa: definicja.nazwa,
+    wartosc: definicja.max,
+    suffix: definicja.suffix || "",
+    pasywka: !!definicja.pasywka,
+    opis: definicja.opis || "",
+    tekst: definicja.tekstTooltip || "",
+    ulepszenie: true
+  };
 
-    ulepszoneItemySet.add(itemId);
-  }
+  ulepszoneItemySet.add(itemId);
 
   obliczStatystyki(1);
   utworzItemy(1);
@@ -721,6 +736,17 @@ function ustawPrzyciski(tryb) {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
+/* Przycisk prędkości gry: x1 -> x1,5 -> x2 -> x1 */
+function przelaczPredkosc() {
+  const i = PREDKOSCI_GRY.indexOf(mnoznikPredkosciGry);
+  mnoznikPredkosciGry = PREDKOSCI_GRY[(i + 1) % PREDKOSCI_GRY.length];
+
+  const el = document.getElementById("predkosc-tekst");
+  if (el) el.textContent = "x" + String(mnoznikPredkosciGry).replace(".", ",");
+
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
 const infoEl = document.getElementById("survivor-info");
 
 function aktualizujHudPostaci(graczId) {
@@ -870,7 +896,7 @@ function stworzArcybossa(punkt, odporny = false) {
     dmgPocisk: dmgPocisk,
     liczbaPociskow: liczbaPociskow,
     predkosc: PREDKOSC_BOSS * ARCYBOSS_MNOZNIK_PREDKOSCI,
-    ostatniAtak: performance.now(),
+    ostatniAtak: czasWirt(),
     ostatniTikKrwawienia: 0,
     zatruteAtaki: 0,
     krwawienieTury: 0,
@@ -983,7 +1009,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
   // Wskrzeszenie: pełna nietykalność na 3s — bez tego pociski WYSTRZELONE
   // tuż przed triggerem (już lecące w stronę gracza) nadal by trafiały,
   // mimo że wrogowie są unieruchomieni i nie mogą zaatakować ponownie.
-  if (performance.now() < wskrzeszenieDoCzasu) return;
+  if (czasWirt() < wskrzeszenieDoCzasu) return;
 
   const staty1 = stan[1].staty;
   if (!staty1) return;
@@ -1025,7 +1051,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
       postac.hp = Math.round(postac.maxHp * 0.75);
       aktualizujPasekPostaci();
 
-      const teraz = performance.now();
+      const teraz = czasWirt();
       wrogowie.forEach(wrog => {
         wrog.ogluszonyDoCzasu = teraz + 3000;
       });
@@ -1157,13 +1183,13 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   if (losujProcent() < (staty1.otrucie || 0)) cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
   // ARCYBOSSY są odporne na omdlenie (zwykłe moby i Bossy nie).
   if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) {
-    cel.ogluszonyDoCzasu = performance.now() + CZAS_OGLUSZENIA_MS;
+    cel.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
     rundaStaty.omdlenia += 1;
   }
   if (losujProcent() < (staty1.krwawienie || 0)) {
     // Pierwszy tik dopiero po 0,5s (tylko gdy nie krwawił już wcześniej —
     // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
-    if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = performance.now();
+    if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
     cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
   }
 
@@ -1171,14 +1197,14 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   return dmg;
 }
 
-/* Atak MAGICZNY (umiejętności): Podstawowe obrażenia + zabici, razy
-   (1 + Obrażenia umiejętności %). Ignoruje pancerz, nie krytuje, nie
+/* Atak MAGICZNY (umiejętności): (Podstawowe obrażenia + zabici) * mnożnik umiejętności,
+   razy (1 + Obrażenia umiejętności %). Ignoruje pancerz, nie krytuje, nie
    przeszywa, nie nakłada trucizny/krwawienia/omdlenia i nie kradnie życia.
    Odporność moba (redukcja obrażeń) nadal działa. */
-function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla) {
+function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
 
-  const baza = (staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw();
+  const baza = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * mnoznik;
   const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
   const dmg = Math.round(dmgBazowe * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
 
@@ -1187,10 +1213,92 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla) {
   rundaStaty.magiczne += dmg;
   if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
 
-  dodajEfektAtaku(cel.x, cel.y, dmg, { magia: true, xZrodla, yZrodla });
+  dodajEfektAtaku(cel.x, cel.y, dmg, {
+    magia: true,
+    xZrodla,
+    yZrodla,
+    kolorLinii: opcje.kolorLinii,
+    bezLinii: opcje.bezLinii
+  });
 
   if (cel.hp <= 0) zabijWroga(cel);
   return dmg;
+}
+
+/* ---------- UMIEJĘTNOŚCI PASYWNE: pomocnicze ---------- */
+
+/* -1 = umiejętność niekupiona, 0–4 = kupiona + liczba kupionych ulepszeń (I–IV). */
+function poziomUmiejetnosci(id) {
+  if (typeof umiejetnosciStan === "undefined") return -1;
+  const st = umiejetnosciStan[id];
+  return st && st.odblokowana ? st.poziom : -1;
+}
+
+function zaplanujAkcje(opoznienieMs, fn) {
+  zaplanowaneAkcje.push({ kiedy: zegarGryMs + opoznienieMs, fn });
+}
+
+function przetworzZaplanowaneAkcje() {
+  if (!zaplanowaneAkcje.length) return;
+  const gotowe = zaplanowaneAkcje.filter(a => a.kiedy <= zegarGryMs);
+  if (!gotowe.length) return;
+  zaplanowaneAkcje = zaplanowaneAkcje.filter(a => a.kiedy > zegarGryMs);
+  gotowe.forEach(a => a.fn());
+}
+
+function znajdzNajblizszychWrogow(liczba, wykluczone) {
+  return wrogowie
+    .filter(w => w.hp > 0 && !wykluczone.has(w.id))
+    .sort((a, b) => Math.hypot(postac.x - a.x, postac.y - a.y) - Math.hypot(postac.x - b.x, postac.y - b.y))
+    .slice(0, liczba);
+}
+
+/* Odłamkowa strzała: razem ze zwykłym atakiem lecą mniejsze błękitne strzały
+   w X najbliższych wrogów (poza celem zwykłego ataku). Nie przebijają. */
+function wystrzelOdlamki(celGlowny, liczba) {
+  znajdzNajblizszychWrogow(liczba, new Set([celGlowny.id])).forEach(wrog => {
+    const dx = wrog.x - postac.x;
+    const dy = wrog.y - postac.y;
+    const dlugosc = Math.hypot(dx, dy) || 1;
+    pociskiGracza.push({
+      typ: "odlamek",
+      x: postac.x,
+      y: postac.y,
+      dx: dx / dlugosc,
+      dy: dy / dlugosc,
+      trafieni: new Set()
+    });
+  });
+}
+
+/* Magiczna strzała: fioletowa łza, wybuch 2x większy niż zwykły. */
+function wystrzelMagicznaStrzale() {
+  const cel = znajdzNajblizszegoWroga();
+  if (!cel) return;
+
+  const dx = cel.x - postac.x;
+  const dy = cel.y - postac.y;
+  const dlugosc = Math.hypot(dx, dy) || 1;
+  pociskiGracza.push({
+    typ: "magiczna",
+    x: postac.x,
+    y: postac.y,
+    dx: dx / dlugosc,
+    dy: dy / dlugosc,
+    trafieni: new Set()
+  });
+}
+
+function wybuchMagicznejStrzaly(cel, staty1) {
+  const x = cel.x;
+  const y = cel.y;
+  dodajEfektWybuchu(x, y, PROMIEN_WYBUCHU_MAGICZNEJ, KOLOR_WYBUCHU_MAGICZNEJ);
+
+  wrogowie.slice().forEach(wrog => {
+    if (wrog.hp <= 0) return;
+    if (Math.hypot(x - wrog.x, y - wrog.y) > PROMIEN_WYBUCHU_MAGICZNEJ) return;
+    wykonajAtakMagiczny(wrog, staty1, x, y, 1 / 2, { bezLinii: true });
+  });
 }
 
 function atakGracza() {
@@ -1213,17 +1321,29 @@ function atakGracza() {
     trafieni: new Set(),
     mnoznikPrzebicia: 1
   });
+
+  const pOdlamkowa = poziomUmiejetnosci("odlamkowa");
+  if (pOdlamkowa >= 0) wystrzelOdlamki(cel, 1 + pOdlamkowa);
+
+  const pMagiczna = poziomUmiejetnosci("magiczna");
+  if (pMagiczna >= 0) {
+    licznikAtakowMagicznej += 1;
+    if (licznikAtakowMagicznej >= 7 - pMagiczna) {
+      licznikAtakowMagicznej = 0;
+      zaplanujAkcje(OPOZNIENIE_MAGICZNEJ_MS, wystrzelMagicznaStrzale);
+    }
+  }
 }
 
-/* Ulepszenie broni: 33% szansy na Obrażenia obszarowe przy trafieniu.
-   Obrażenia wybuchu = 90–110% obrażeń tego trafienia (losowane przy każdym
-   wybuchu, nie z affixu). Wywoływane dla trafienia strzałą ORAZ dla każdego
-   ogniwa łańcucha Elektrycznej strzały. */
+/* Umiejętność "Ognista strzała": 33% szansy na obrażenia obszarowe przy trafieniu.
+   Obrażenia wybuchu = (60 + 15 * poziom)% obrażeń tego trafienia, magiczne.
+   Wywoływane dla trafienia strzałą ORAZ dla każdego ogniwa łańcucha Elektrycznej strzały. */
 function sprobujObrazenObszarowych(cel, dmg, staty1) {
-  if (!staty1.obrazeniaObszarowe || !dmg) return;
+  const pOgnista = poziomUmiejetnosci("ognista");
+  if (pOgnista < 0 || !dmg) return;
   if (losujProcent() >= SZANSA_PROCKA_STRZALY) return;
 
-  const mnoznikWybuchu = (90 + Math.random() * 20) / 100;
+  const mnoznikWybuchu = (60 + 15 * pOgnista) / 100;
   dodajEfektWybuchu(cel.x, cel.y, PROMIEN_OGNIA);
 
   wrogowie.forEach(wrog => {
@@ -1267,14 +1387,15 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
     });
   }
 
-  if ((staty1.elektrycznaStrzala || 0) > 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
+  const pElektryczna = poziomUmiejetnosci("elektryczna");
+  if (pElektryczna >= 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
     let poprzedniCel = cel;
     const wykluczone = new Set([cel.id]);
-    for (let i = 0; i < staty1.elektrycznaStrzala; i++) {
+    for (let i = 0; i < 1 + pElektryczna; i++) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
-      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y);
+      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ });
       sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
     }
@@ -1286,6 +1407,21 @@ function aktualizujPociskiGracza(dtMs) {
   pociskiGracza = pociskiGracza.filter(pocisk => {
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
+
+    if (pocisk.typ === "odlamek" || pocisk.typ === "magiczna") {
+      if (staty1) {
+        const promienTrafienia = pocisk.typ === "magiczna" ? 20 : 9;
+        for (const wrog of wrogowie) {
+          if (wrog.hp <= 0) continue;
+          if (Math.hypot(wrog.x - pocisk.x, wrog.y - pocisk.y) > promienWroga(wrog) + promienTrafienia) continue;
+
+          if (pocisk.typ === "magiczna") wybuchMagicznejStrzaly(wrog, staty1);
+          else wykonajAtakMagiczny(wrog, staty1, pocisk.x, pocisk.y, 1 / 5, { bezLinii: true });
+          return false; // nie przebijają
+        }
+      }
+      return (pocisk.x > -60 && pocisk.x < canvas.width + 60 && pocisk.y > -60 && pocisk.y < canvas.height + 60);
+    }
 
     if (staty1) {
       for (const wrog of wrogowie) {
@@ -1310,6 +1446,22 @@ function zabijWroga(wrog) {
   wrogowie = wrogowie.filter(w => w.id !== wrog.id);
   liczbaZabitych += 1;
   renderujStatyGracza();
+
+  // Monety: ARCYBOSS zawsze 2, pozostali wrogowie losowo 0–2.
+  const monetyZaZabojstwo = wrog.typ === "arcyboss" ? 2 : losujLiczbe(0, 2);
+  if (monetyZaZabojstwo > 0 && typeof dodajMonety === "function") {
+    dodajMonety(monetyZaZabojstwo);
+    efekty.push({
+      typ: "tekst",
+      x: wrog.x + 8,
+      y: wrog.y - 36,
+      tekst: `+${monetyZaZabojstwo}🪙`,
+      kolor: "#ffd700",
+      rozmiar: 18,
+      zycie: 900,
+      zycieMax: 900
+    });
+  }
 
   if (wrog.typ === "boss") log("🏆 Boss pokonany!", "log-zwyciestwo");
   if (wrog.typ === "arcyboss") {
@@ -1543,15 +1695,18 @@ function rysujKolceOdpornego(x, y, promien) {
 
 function dodajEfektAtaku(x, y, dmg, opcje) {
   opcje = opcje || {};
-  efekty.push({
-    typ: "linia",
-    x1: opcje.xZrodla ?? postac.x,
-    y1: opcje.yZrodla ?? postac.y,
-    x2: x,
-    y2: y,
-    zycie: 120,
-    zycieMax: 120
-  });
+  if (!opcje.bezLinii) {
+    efekty.push({
+      typ: "linia",
+      x1: opcje.xZrodla ?? postac.x,
+      y1: opcje.yZrodla ?? postac.y,
+      x2: x,
+      y2: y,
+      rgb: opcje.kolorLinii || KOLOR_LINII_ZWYKLEJ,
+      zycie: 120,
+      zycieMax: 120
+    });
+  }
 
   let styl;
   let prefix = "";
@@ -1600,12 +1755,13 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
   }
 }
 
-function dodajEfektWybuchu(x, y, promien) {
+function dodajEfektWybuchu(x, y, promien, rgb) {
   efekty.push({
     typ: "wybuch",
     x: x,
     y: y,
     promien: promien,
+    rgb: rgb || KOLOR_WYBUCHU_OGNIA,
     zycie: CZAS_TRWANIA_WYBUCHU_MS,
     zycieMax: CZAS_TRWANIA_WYBUCHU_MS
   });
@@ -1619,7 +1775,7 @@ function aktualizujEfekty(dtMs) {
 
 function rysujGre() {
   if (!canvas.width || !canvas.height) return;
-  const teraz = performance.now();
+  const teraz = czasWirt();
 
   // Tło areny (arena.jpg) jest ustawione w CSS na .survivor-canvas-wrap — canvas tylko czyścimy.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1683,6 +1839,45 @@ function rysujGre() {
   });
 
   pociskiGracza.forEach(p => {
+    if (p.typ === "magiczna") {
+      // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
+      const r = 7;
+      const dlugoscOgona = 34;
+      const px = -p.dy;
+      const py = p.dx;
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.dx * dlugoscOgona, p.y - p.dy * dlugoscOgona);
+      ctx.lineTo(p.x + px * r, p.y + py * r);
+      ctx.lineTo(p.x - px * r, p.y - py * r);
+      ctx.closePath();
+      ctx.fillStyle = "#a54dff";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = "#b866ff";
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#e6ccff";
+      ctx.stroke();
+      return;
+    }
+
+    if (p.typ === "odlamek") {
+      // mniejsza, błękitna wersja zwykłej strzały
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.dx * 13, p.y - p.dy * 13);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = "#5cc8ff";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = "#d6f3ff";
+      ctx.fill();
+      return;
+    }
+
     const dlugoscStrzaly = 22;
     const xTyl = p.x - p.dx * dlugoscStrzaly;
     const yTyl = p.y - p.dy * dlugoscStrzaly;
@@ -1709,17 +1904,17 @@ function rysujGre() {
 
       ctx.beginPath();
       ctx.arc(e.x, e.y, promienAktualny, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 140, 26, ${0.18 * alpha})`;
+      ctx.fillStyle = `rgba(${e.rgb || KOLOR_WYBUCHU_OGNIA}, ${0.18 * alpha})`;
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = `rgba(255, 140, 26, ${0.9 * alpha})`;
+      ctx.strokeStyle = `rgba(${e.rgb || KOLOR_WYBUCHU_OGNIA}, ${0.9 * alpha})`;
       ctx.stroke();
     } else if (e.typ === "linia") {
       ctx.beginPath();
       ctx.moveTo(e.x1, e.y1);
       ctx.lineTo(e.x2, e.y2);
-      ctx.strokeStyle = `rgba(220,255,220,${Math.max(0, e.zycie / e.zycieMax)})`;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(${e.rgb || KOLOR_LINII_ZWYKLEJ},${Math.max(0, e.zycie / e.zycieMax)})`;
+      ctx.lineWidth = e.rgb === KOLOR_LINII_ELEKTRYCZNEJ ? 3 : 2;
       ctx.stroke();
     } else {
       ctx.globalAlpha = Math.max(0, e.zycie / e.zycieMax);
@@ -1821,8 +2016,11 @@ canvas.addEventListener("mousedown", event => {
 function petlaGry(teraz) {
   if (!graTrwa) return;
 
-  const dtMs = ostatniCzas ? teraz - ostatniCzas : 16;
+  const realDtMs = ostatniCzas ? teraz - ostatniCzas : 16;
   ostatniCzas = teraz;
+  const dtMs = realDtMs * mnoznikPredkosciGry;
+  zegarGryMs += dtMs;
+  const czasWirtualny = zegarGryMs;
 
   czasGryMs += dtMs;
   aktualizujCzasGry();
@@ -1842,8 +2040,10 @@ function petlaGry(teraz) {
     czasDoAtakuGracza = pobierzCzasAtakuGracza();
   }
 
-  wrogowie.forEach(wrog => aktualizujWroga(wrog, dtMs, teraz));
-  aktualizujKrwawienieWrogow(teraz);
+  przetworzZaplanowaneAkcje();
+
+  wrogowie.forEach(wrog => aktualizujWroga(wrog, dtMs, czasWirtualny));
+  aktualizujKrwawienieWrogow(czasWirtualny);
   aktualizujPociski(dtMs);
   aktualizujPociskiGracza(dtMs);
   aktualizujEfekty(dtMs);
@@ -1872,6 +2072,10 @@ function rozpocznijGre() {
   numerFaliArcybossa = 0;
   czasDoSpawnu = 500;
   czasGryMs = 0;
+  zegarGryMs = 0;
+  zaplanowaneAkcje = [];
+  licznikAtakowMagicznej = 0;
+  if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();
   blyskObrazenMs = 0;
