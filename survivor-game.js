@@ -742,7 +742,7 @@ function przelaczPredkosc() {
   mnoznikPredkosciGry = PREDKOSCI_GRY[(i + 1) % PREDKOSCI_GRY.length];
 
   const el = document.getElementById("predkosc-tekst");
-  if (el) el.textContent = "x" + String(mnoznikPredkosciGry).replace(".", ",");
+  if (el) el.textContent = "x" + String(mnoznikPredkosciGry).replace(".", ","); 
 
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
