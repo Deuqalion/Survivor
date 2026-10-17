@@ -177,8 +177,12 @@ function obliczStatystyki(gracz) {
 
   // Połącz zwykłe wylosowane affixy z trwałymi affixami ulepszeń, żeby
   // oba źródła liczyły się do tych samych statystyk.
+  // Trzecie źródło: bonusy z kart "WYBIERZ BONUS" (po ulepszeniu wszystkich itemów).
+  const bonusyAffixy = stan[gracz].bonusyAffixy || [];
+
   const wszystkieListyAffixow = Object.values(wylosowaneItemy)
-    .concat(Object.values(ulepszeniaAffixy).map(affix => [affix]));
+    .concat(Object.values(ulepszeniaAffixy).map(affix => [affix]))
+    .concat([bonusyAffixy]);
 
   wszystkieListyAffixow.forEach(affixyList => {
     if (!affixyList) return;
@@ -287,7 +291,21 @@ function sprawdzWywołanieUlepszenia() {
   }
 }
 
+/* Czy został choć jeden odblokowany item, który można jeszcze ulepszyć? */
+function sąItemyDoUlepszenia() {
+  return Object.entries(itemy).some(([itemId, item]) => {
+    const id = Number(itemId);
+    return stan[1].odblokowaneItemy.has(id) && !ulepszoneItemySet.has(id) && !!MAPA_ULEPSZEN_ITEMOW[item.nazwa];
+  });
+}
+
 function otworzOknoUlepszeniaItemu() {
+  // Wszystko już ulepszone — zamiast pustego, niezamykalnego okna dajemy wybór bonusu.
+  if (!sąItemyDoUlepszenia()) {
+    otworzOknoBonusu();
+    return;
+  }
+
   oczekiwanieNaUlepszenieItemu = true;
   graTrwa = false;
 
@@ -400,6 +418,66 @@ function wykonajUlepszenieItemu(itemId) {
   // okna liczy dtMs jako cały czas spędzony na wyborze ulepszenia, więc
   // wrogowie/pociski skaczą o kilka sekund ruchu w jednej klatce.
   ostatniCzas = 0;
+  requestAnimationFrame(petlaGry);
+}
+
+/* ============================================================
+   BONUS PO ULEPSZENIU WSZYSTKICH ITEMÓW — wybór 1 z 3 kart
+   Wartości dodają się na stałe (do końca gry) do statystyk.
+   ============================================================ */
+
+const BONUSY_PO_ULEPSZENIACH = [
+  [{ nazwa: "Wartość ataku", wartosc: 100 }],
+  [{ nazwa: "Wartość ataku", wartosc: 50 }, { nazwa: "Dodatkowe PŻ", wartosc: 200 }],
+  [{ nazwa: "Dodatkowe PŻ", wartosc: 400 }]
+];
+
+function otworzOknoBonusu() {
+  oczekiwanieNaUlepszenieItemu = true; // ta sama blokada co przy ulepszaniu: pauza/wiki/umiejętności nie wznowią gry
+  graTrwa = false;
+
+  let overlay = document.getElementById("wybor-bonusu-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "wybor-bonusu-overlay";
+    overlay.innerHTML = `
+      <div class="ulepszenie-uklad">
+        <div class="ulepszenie-tytul">WYBIERZ BONUS</div>
+        <div id="bonus-karty"></div>
+      </div>
+    `;
+    document.querySelector(".survivor-canvas-wrap").appendChild(overlay);
+  }
+
+  const kontener = document.getElementById("bonus-karty");
+  kontener.innerHTML = "";
+
+  BONUSY_PO_ULEPSZENIACH.forEach(affixyKarty => {
+    const karta = document.createElement("div");
+    karta.className = "bonus-karta";
+    karta.innerHTML = affixyKarty.map(a => `
+      <div class="bonus-affix">
+        <div class="bonus-affix-nazwa">${a.nazwa}</div>
+        <div class="bonus-affix-wartosc">${a.wartosc}</div>
+      </div>
+    `).join("");
+    karta.addEventListener("click", () => wybierzBonus(affixyKarty));
+    kontener.appendChild(karta);
+  });
+
+  overlay.classList.add("visible");
+}
+
+function wybierzBonus(affixyKarty) {
+  if (!stan[1].bonusyAffixy) stan[1].bonusyAffixy = [];
+  affixyKarty.forEach(a => stan[1].bonusyAffixy.push({ nazwa: a.nazwa, wartosc: a.wartosc, suffix: "" }));
+
+  obliczStatystyki(1);
+
+  document.getElementById("wybor-bonusu-overlay").classList.remove("visible");
+  oczekiwanieNaUlepszenieItemu = false;
+  graTrwa = true;
+  ostatniCzas = 0; // jak przy zamknięciu okna ulepszenia — bez skoku czasu w pierwszej klatce
   requestAnimationFrame(petlaGry);
 }
 
@@ -1197,24 +1275,44 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   return dmg;
 }
 
+/* Trucizna na obrażeniach MAGICZNYCH: otruty cel dostaje zwiększone obrażenia
+   umiejętności (tak samo jak od zwykłego ataku: +TRUCIZNA_BONUS + Wzmocnienie trucizny)
+   i każde takie trafienie skraca czas trwania otrucia o 1 atak.
+   dmgBazowe = obrażenia magiczne po odporności moba, przed trucizną.
+   Zwraca { dmg, dmgTrucizny, dmgWyswietlany }. */
+function obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe) {
+  const bez = Math.round(dmgBazowe);
+  if (!(cel.zatruteAtaki > 0)) return { dmg: bez, dmgTrucizny: 0, dmgWyswietlany: bez };
+
+  cel.zatruteAtaki -= 1;
+  const mnoznikTrucizny = 1 + TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100);
+  const dmg = Math.round(dmgBazowe * mnoznikTrucizny);
+  const dmgTrucizny = Math.max(0, dmg - bez);
+  return { dmg, dmgTrucizny, dmgWyswietlany: dmgTrucizny > 0 ? bez : dmg };
+}
+
 /* Atak MAGICZNY (umiejętności): (Podstawowe obrażenia + zabici) * mnożnik umiejętności,
    razy (1 + Obrażenia umiejętności %). Ignoruje pancerz, nie krytuje, nie
    przeszywa, nie nakłada trucizny/krwawienia/omdlenia i nie kradnie życia.
-   Odporność moba (redukcja obrażeń) nadal działa. */
+   Odporność moba (redukcja obrażeń) nadal działa. Otruty cel dostaje obrażenia
+   zwiększone przez truciznę (patrz obrazeniaMagiczneZTrucizna). */
 function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
 
   const baza = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * mnoznik;
-  const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
-  const dmg = Math.round(dmgBazowe * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+  const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
+  const { dmg, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe);
 
   cel.hp -= dmg;
   rundaStaty.obrazenia += dmg;
   rundaStaty.magiczne += dmg;
+  rundaStaty.trucizna += dmgTrucizny;
+  if (opcje.zrodlo) dodajDmgUmiejetnosci(opcje.zrodlo, dmg);
   if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
 
-  dodajEfektAtaku(cel.x, cel.y, dmg, {
+  dodajEfektAtaku(cel.x, cel.y, dmgWyswietlany, {
     magia: true,
+    dmgTrucizny,
     xZrodla,
     yZrodla,
     kolorLinii: opcje.kolorLinii,
@@ -1297,7 +1395,7 @@ function wybuchMagicznejStrzaly(cel, staty1) {
   wrogowie.slice().forEach(wrog => {
     if (wrog.hp <= 0) return;
     if (Math.hypot(x - wrog.x, y - wrog.y) > PROMIEN_WYBUCHU_MAGICZNEJ) return;
-    wykonajAtakMagiczny(wrog, staty1, x, y, 1 / 2, { bezLinii: true });
+    wykonajAtakMagiczny(wrog, staty1, x, y, 1 / 2, { bezLinii: true, zrodlo: "magiczna" });
   });
 }
 
@@ -1337,7 +1435,8 @@ function atakGracza() {
 
 /* Umiejętność "Ognista strzała": 33% szansy na obrażenia obszarowe przy trafieniu.
    Obrażenia wybuchu = (60 + 15 * poziom)% obrażeń tego trafienia, magiczne.
-   Wywoływane dla trafienia strzałą ORAZ dla każdego ogniwa łańcucha Elektrycznej strzały. */
+   Wywoływane dla trafienia strzałą, dla każdego ogniwa łańcucha Elektrycznej strzały
+   ORAZ dla każdej trafiającej Odłamkowej strzały. */
 function sprobujObrazenObszarowych(cel, dmg, staty1) {
   const pOgnista = poziomUmiejetnosci("ognista");
   if (pOgnista < 0 || !dmg) return;
@@ -1352,13 +1451,16 @@ function sprobujObrazenObszarowych(cel, dmg, staty1) {
 
     const dmgWybuchu = Math.round(dmg * mnoznikWybuchu);
     if (dmgWybuchu <= 0) return;
-    // Obrażenia magiczne — pancerz nie działa.
-    const dmgMagiczne = Math.round(dmgWybuchu * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+    // Obrażenia magiczne — pancerz nie działa, trucizna zwiększa i skraca otrucie.
+    const dmgPoOdpornosci = dmgWybuchu * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
+    const { dmg: dmgMagiczne, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(wrog, staty1, dmgPoOdpornosci);
 
     wrog.hp -= dmgMagiczne;
     rundaStaty.obrazenia += dmgMagiczne;
     rundaStaty.magiczne += dmgMagiczne;
-    dodajEfektAtaku(wrog.x, wrog.y, dmgMagiczne, { magia: true, xZrodla: cel.x, yZrodla: cel.y });
+    rundaStaty.trucizna += dmgTrucizny;
+    dodajDmgUmiejetnosci("ognista", dmgMagiczne);
+    dodajEfektAtaku(wrog.x, wrog.y, dmgWyswietlany, { magia: true, dmgTrucizny, xZrodla: cel.x, yZrodla: cel.y });
     if (wrog.hp <= 0) zabijWroga(wrog);
   });
 }
@@ -1395,7 +1497,7 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
-      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ });
+      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ, zrodlo: "elektryczna" });
       sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
     }
@@ -1416,7 +1518,10 @@ function aktualizujPociskiGracza(dtMs) {
           if (Math.hypot(wrog.x - pocisk.x, wrog.y - pocisk.y) > promienWroga(wrog) + promienTrafienia) continue;
 
           if (pocisk.typ === "magiczna") wybuchMagicznejStrzaly(wrog, staty1);
-          else wykonajAtakMagiczny(wrog, staty1, pocisk.x, pocisk.y, 1 / 5, { bezLinii: true });
+          else {
+            const dmgOdlamka = wykonajAtakMagiczny(wrog, staty1, pocisk.x, pocisk.y, 1 / 4, { bezLinii: true, zrodlo: "odlamkowa" });
+            sprobujObrazenObszarowych(wrog, dmgOdlamka, staty1); // Odłamkowa też procuje Ognistą
+          }
           return false; // nie przebijają
         }
       }
@@ -2088,6 +2193,9 @@ function rozpocznijGre() {
 
   ulepszoneItemySet.clear();
   stan[1].ulepszeniaAffixy = {};
+  stan[1].bonusyAffixy = []; // nowa gra = bez bonusów z kart
+  const bonusOverlay = document.getElementById("wybor-bonusu-overlay");
+  if (bonusOverlay) bonusOverlay.classList.remove("visible");
   zamienPasywkeStrzaly("Zwykła strzała"); // nowa gra = strzała znów nieulepszona
   obliczStatystyki(1);
   utworzItemy(1);
@@ -2144,8 +2252,20 @@ function nowaRundaStaty() {
     najwiekszyCios: 0,
     bloki: 0,
     otrzymane: 0,
-    magiczne: 0          // część "obrazenia" zadana jako obrażenia magiczne (reszta = fizyczne)
+    magiczne: 0,         // część "obrazenia" zadana jako obrażenia magiczne (reszta = fizyczne)
+    // Obrażenia zadane przez poszczególne umiejętności pasywne (tooltip w oknie umiejętności)
+    umiej: { elektryczna: 0, ognista: 0, odlamkowa: 0, magiczna: 0 }
   };
+}
+
+/* Dolicza obrażenia do licznika danej umiejętności (resetuje się z rundaStaty przy nowej grze). */
+function dodajDmgUmiejetnosci(id, dmg) {
+  if (rundaStaty && rundaStaty.umiej && id in rundaStaty.umiej) rundaStaty.umiej[id] += dmg;
+}
+
+/* Ile obrażeń dana umiejętność zadała w tej grze — czyta okno umiejętności. */
+function zadaneObrazeniaUmiejetnosci(id) {
+  return (rundaStaty && rundaStaty.umiej && rundaStaty.umiej[id]) || 0;
 }
 
 function fmtLiczbaPL(n) {

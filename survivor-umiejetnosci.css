@@ -175,6 +175,18 @@
 
 .umiej-tekst.przygaszony { opacity: 0.55; }
 
+/* Najechanie na ikonę umiejętności: opis znika, pokazuje się "Zadane obrażenia" */
+.umiej-tekst-obr { display: none; }
+.umiej-tekst.pokaz-obrazenia .umiej-tekst-opis { display: none; }
+.umiej-tekst.pokaz-obrazenia .umiej-tekst-obr { display: block; }
+
+/* Liczba zadanych obrażeń — ten sam styl co obrażenia w opisach, tylko nieco większa */
+.umiej-dmg.umiej-dmg-duze {
+  font-size: 1.5em;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Wartość obrażeń: granat z lekką czarną obwódką */
 .umiej-dmg {
   color: #17308f;

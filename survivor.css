@@ -621,6 +621,74 @@ body { transform: none; }
   transform: translateX(-50%) translateY(0);
 }
 
+/* ==========================================================
+   WYBÓR BONUSU (po ulepszeniu wszystkich itemów) — 3 karty
+   ========================================================== */
+
+#wybor-bonusu-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.22) 0%, rgba(20, 20, 20, 0.88) 70%);
+  backdrop-filter: blur(10px) grayscale(0.4);
+}
+
+#wybor-bonusu-overlay.visible { display: flex; }
+
+#bonus-karty {
+  display: flex;
+  gap: 36px;
+  justify-content: center;
+}
+
+.bonus-karta {
+  width: 240px;
+  height: 340px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px 14px;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(34, 24, 12, 0.96), rgba(12, 10, 8, 0.96));
+  border: 3px solid #6b5420;
+  border-radius: 14px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 6px 18px rgba(0, 0, 0, 0.7);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.bonus-karta:hover {
+  border-color: #ffd700;
+  background: linear-gradient(180deg, rgba(90, 66, 12, 0.96), rgba(30, 22, 6, 0.96));
+  box-shadow: inset 0 0 40px rgba(255, 215, 0, 0.18), 0 0 28px rgba(255, 215, 0, 0.75);
+  transform: translateY(-8px) scale(1.04);
+}
+
+.bonus-affix-nazwa {
+  font-size: 26px;
+  font-weight: bold;
+  line-height: 1.15;
+  color: #e8dcc0;
+  text-shadow: 1px 2px 3px #000;
+}
+
+.bonus-affix-wartosc {
+  margin-top: 6px;
+  font-size: 50px;
+  font-weight: bold;
+  line-height: 1;
+  color: #ffd700;
+  text-shadow: 0 0 14px rgba(255, 215, 0, 0.55), 2px 3px 4px #000;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Tooltip: Affix z ulepszenia — żółta poświata, wycentrowana nazwa i wartość na środku grafiki itemu */
 .affix-ulepszenie {
   display: flex;
