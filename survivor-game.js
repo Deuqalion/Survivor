@@ -73,8 +73,15 @@ const SZANSA_PROCKA_STRZALY = 33;
 const CZAS_TRWANIA_WYBUCHU_MS = 350;
 
 /* Umiejętności pasywne w walce (poziomy i odblokowanie: survivor-umiejetnosci.js) */
+const KAT_POTROJNEJ_STRZALY = 25 * Math.PI / 180;   // boczne strzały: 25° od głównej
 const OPOZNIENIE_MAGICZNEJ_MS = 130;                 // ułamek sekundy po ataku, z którego leci Magiczna strzała
-const PROMIEN_WYBUCHU_MAGICZNEJ = PROMIEN_OGNIA * 2; // 2x większy niż zwykły wybuch
+const PROMIEN_WYBUCHU_MAGICZNEJ = PROMIEN_OGNIA * 1.6; // 1,6x zasięg Ognistej strzały
+const PROMIEN_WYBUCHU_MAGICZNEJ_MAX = PROMIEN_OGNIA * 2.2; // 2,2x po maksymalnym poziomie umiejętności
+const MAX_POZIOM_UMIEJETNOSCI = 4;
+const MNOZNIK_EFEKTOW_POBOCZNYCH = 0.8; // Potrójna (max): efekty z bocznych strzał w 80% skuteczności
+const SPOWOLNIENIE_ELEKTRYCZNEJ = 0.2;  // Elektryczna (max): -20% prędkości
+const CZAS_SPOWOLNIENIA_MS = 1000;
+const OPOZNIENIE_DRUGIEJ_SALWY_MS = 180; // Odłamkowa (max): druga salwa po ułamku sekundy
 const KOLOR_WYBUCHU_MAGICZNEJ = "170, 70, 255";      // fiolet
 const KOLOR_WYBUCHU_OGNIA = "255, 140, 26";
 const KOLOR_LINII_ELEKTRYCZNEJ = "255, 215, 0";      // złoty
@@ -223,6 +230,12 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Elektryczna strzała") elektrycznaStrzala += val;
     });
   });
+
+  // Bonusy za maksymalny poziom umiejętności pasywnych (gracz 1)
+  if (gracz === 1 && typeof poziomUmiejetnosci === "function") {
+    if (poziomUmiejetnosci("wampiryczna") >= MAX_POZIOM_UMIEJETNOSCI) kradziezZycia += 5;
+    if (poziomUmiejetnosci("ognista") >= MAX_POZIOM_UMIEJETNOSCI) obrazeniaUmiejetnosci += 5;
+  }
 
   const finalnePz = Math.round((pz + dodatkowePz) * (1 + wzmocnieniePz / 100));
   const finalnyPancerz = Math.round(pancerz * (1 + wzmocnieniePancerza / 100));
@@ -1014,6 +1027,8 @@ function promienWroga(wrog) {
 function aktualizujWroga(wrog, dtMs, teraz) {
   if (teraz < wrog.ogluszonyDoCzasu) return;
 
+  const mnoznikRuchu = teraz < (wrog.spowolnionyDoCzasu || 0) ? 1 - SPOWOLNIENIE_ELEKTRYCZNEJ : 1;
+
   const dx = postac.x - wrog.x;
   const dy = postac.y - wrog.y;
   const dystans = Math.hypot(dx, dy) || 1;
@@ -1029,8 +1044,8 @@ function aktualizujWroga(wrog, dtMs, teraz) {
   else zasieg = ZASIEG_MELEE;
 
   if (dystans > zasieg) {
-    wrog.x += (dx / dystans) * wrog.predkosc * (dtMs / 1000);
-    wrog.y += (dy / dystans) * wrog.predkosc * (dtMs / 1000);
+    wrog.x += (dx / dystans) * wrog.predkosc * mnoznikRuchu * (dtMs / 1000);
+    wrog.y += (dy / dystans) * wrog.predkosc * mnoznikRuchu * (dtMs / 1000);
     return;
   }
 
@@ -1193,8 +1208,15 @@ function znajdzNajblizszegoWrogaOd(cel, wykluczone = new Set()) {
   return najblizszy;
 }
 
-function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia = 1) {
+/* opcje.poboczny = strzała boczna z umiejętności "Potrójna strzała": obrażenia FIZYCZNE
+   (pancerz działa), mogą krytować i przeszywać, ale NIE korzystają z trucizny i nie
+   nakładają trucizny/krwawienia/omdlenia ani nie kradną życia.
+   opcje.mnoznikSkilla = jaką część obrażeń głównej strzały zadaje (np. 0.2 = 20%). */
+function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
+
+  const poboczny = !!opcje.poboczny;
+  const mnoznikSkilla = opcje.mnoznikSkilla ?? 1;
 
   const podstObrazenia = staty1.podstawoweObrażenia || 3000;
   const losowePodstawoweObrazenia = losujLiczbe(
@@ -1204,9 +1226,9 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   const dmgBazowe = (losowePodstawoweObrazenia + (staty1.wartoscAtaku || 0) + bonusObrazenZZabojstw());
 
-  const truciznaAktywna = cel.zatruteAtaki > 0;
+  const truciznaAktywna = !poboczny && cel.zatruteAtaki > 0;
   if (truciznaAktywna) cel.zatruteAtaki -= 1;
-  const mnoznikTrucizny = truciznaAktywna ? 1 + TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100) : 1;
+  const mnoznikTrucizny = truciznaAktywna ? 1 + (TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100)) * (cel.silaTrucizny ?? 1) : 1;
 
   const kryt = losujProcent() < (staty1.kryt || 0);
   const mnoznikKryta = kryt ? 2 + ((staty1.obrazeniaKrytyczne || 0) / 100) : 1;
@@ -1222,7 +1244,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   const redukcja = 100 / (100 + pancerzEfektywny);
   const mnoznikOdpornosci = cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1;
-  const dmg = Math.round(dmgBazowe * mnoznikTrucizny * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci);
+  const dmg = Math.round(dmgBazowe * mnoznikTrucizny * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci * mnoznikSkilla);
 
   cel.hp -= dmg;
 
@@ -1235,7 +1257,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   let dmgWyswietlany = dmg;
   let dmgTrucizny = 0;
   if (truciznaAktywna) {
-    const dmgBezTrucizny = Math.round(dmgBazowe * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci);
+    const dmgBezTrucizny = Math.round(dmgBazowe * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci * mnoznikSkilla);
     dmgTrucizny = Math.max(0, dmg - dmgBezTrucizny);
     if (dmgTrucizny > 0) dmgWyswietlany = dmgBezTrucizny;
   }
@@ -1250,6 +1272,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     yZrodla
   });
 
+  // Kradzież życia (także od bocznych strzał Potrójnej)
   if ((staty1.kradziezZycia || 0) > 0) {
     const skradzione = Math.round(dmg * staty1.kradziezZycia / 100);
     const hpPrzed = postac.hp;
@@ -1258,7 +1281,28 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     aktualizujPasekPostaci();
   }
 
-  if (losujProcent() < (staty1.otrucie || 0)) cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
+  if (poboczny) {
+    // Strzała boczna: obrażenia + kradzież życia. Na maksymalnym poziomie Potrójnej
+    // dodatkowo może nałożyć Otrucie i Krwawienie w 80% skuteczności
+    // (Ognistą strzałę obsługuje aktualizujPociskiGracza).
+    dodajDmgUmiejetnosci("potrojna", dmg);
+    if (poziomUmiejetnosci("potrojna") >= MAX_POZIOM_UMIEJETNOSCI && cel.hp > 0) {
+      // Ta sama szansa co zwykle, ale siła efektu to 80%.
+      if (losujProcent() < (staty1.otrucie || 0)) {
+        cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
+        cel.silaTrucizny = MNOZNIK_EFEKTOW_POBOCZNYCH;
+      }
+      if (losujProcent() < (staty1.krwawienie || 0)) {
+        if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
+        cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
+        cel.silaKrwawienia = MNOZNIK_EFEKTOW_POBOCZNYCH;
+      }
+    }
+    if (cel.hp <= 0) zabijWroga(cel);
+    return dmg;
+  }
+
+  if (losujProcent() < (staty1.otrucie || 0)) { cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW; cel.silaTrucizny = 1; }
   // ARCYBOSSY są odporne na omdlenie (zwykłe moby i Bossy nie).
   if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) {
     cel.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
@@ -1269,6 +1313,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
     if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
     cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
+    cel.silaKrwawienia = 1;
   }
 
   if (cel.hp <= 0) zabijWroga(cel);
@@ -1285,10 +1330,26 @@ function obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe) {
   if (!(cel.zatruteAtaki > 0)) return { dmg: bez, dmgTrucizny: 0, dmgWyswietlany: bez };
 
   cel.zatruteAtaki -= 1;
-  const mnoznikTrucizny = 1 + TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100);
+  const mnoznikTrucizny = 1 + (TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100)) * (cel.silaTrucizny ?? 1);
   const dmg = Math.round(dmgBazowe * mnoznikTrucizny);
   const dmgTrucizny = Math.max(0, dmg - bez);
   return { dmg, dmgTrucizny, dmgWyswietlany: dmgTrucizny > 0 ? bez : dmg };
+}
+
+/* Umiejętność "Wampiryczna strzała": obrażenia MAGICZNE leczą (1 + poziom)% zadanych obrażeń. */
+function wampiryzmZaklec(dmg) {
+  const p = poziomUmiejetnosci("wampiryczna");
+  if (p < 0 || !(dmg > 0) || postac.hp <= 0) return;
+
+  const leczenie = Math.round(dmg * (1 + p) / 100);
+  if (leczenie <= 0) return;
+
+  const hpPrzed = postac.hp;
+  postac.hp = Math.min(postac.maxHp, postac.hp + leczenie);
+  const wyleczone = postac.hp - hpPrzed;
+  rundaStaty.wyleczono += wyleczone;
+  dodajDmgUmiejetnosci("wampiryczna", wyleczone);
+  aktualizujPasekPostaci();
 }
 
 /* Atak MAGICZNY (umiejętności): (Podstawowe obrażenia + zabici) * mnożnik umiejętności,
@@ -1308,6 +1369,7 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
   rundaStaty.magiczne += dmg;
   rundaStaty.trucizna += dmgTrucizny;
   if (opcje.zrodlo) dodajDmgUmiejetnosci(opcje.zrodlo, dmg);
+  wampiryzmZaklec(dmg);
   if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
 
   dodajEfektAtaku(cel.x, cel.y, dmgWyswietlany, {
@@ -1390,11 +1452,12 @@ function wystrzelMagicznaStrzale() {
 function wybuchMagicznejStrzaly(cel, staty1) {
   const x = cel.x;
   const y = cel.y;
-  dodajEfektWybuchu(x, y, PROMIEN_WYBUCHU_MAGICZNEJ, KOLOR_WYBUCHU_MAGICZNEJ);
+  const promien = poziomUmiejetnosci("magiczna") >= MAX_POZIOM_UMIEJETNOSCI ? PROMIEN_WYBUCHU_MAGICZNEJ_MAX : PROMIEN_WYBUCHU_MAGICZNEJ;
+  dodajEfektWybuchu(x, y, promien, KOLOR_WYBUCHU_MAGICZNEJ);
 
   wrogowie.slice().forEach(wrog => {
     if (wrog.hp <= 0) return;
-    if (Math.hypot(x - wrog.x, y - wrog.y) > PROMIEN_WYBUCHU_MAGICZNEJ) return;
+    if (Math.hypot(x - wrog.x, y - wrog.y) > promien) return;
     wykonajAtakMagiczny(wrog, staty1, x, y, 1 / 2, { bezLinii: true, zrodlo: "magiczna" });
   });
 }
@@ -1420,8 +1483,37 @@ function atakGracza() {
     mnoznikPrzebicia: 1
   });
 
+  // Potrójna strzała: 2 dodatkowe strzały po bokach (±25° od głównej), przebijające
+  const pPotrojna = poziomUmiejetnosci("potrojna");
+  if (pPotrojna >= 0) {
+    const ux = dx / dlugosc;
+    const uy = dy / dlugosc;
+    [-1, 1].forEach(strona => {
+      const kat = strona * KAT_POTROJNEJ_STRZALY;
+      pociskiGracza.push({
+        typ: "boczna",
+        x: postac.x,
+        y: postac.y,
+        dx: ux * Math.cos(kat) - uy * Math.sin(kat),
+        dy: ux * Math.sin(kat) + uy * Math.cos(kat),
+        trafieni: new Set(),
+        mnoznikPrzebicia: 1,
+        mnoznikSkilla: (20 + 15 * pPotrojna) / 100
+      });
+    });
+  }
+
   const pOdlamkowa = poziomUmiejetnosci("odlamkowa");
-  if (pOdlamkowa >= 0) wystrzelOdlamki(cel, 1 + pOdlamkowa);
+  if (pOdlamkowa >= 0) {
+    wystrzelOdlamki(cel, 1 + pOdlamkowa);
+    // Max poziom: ułamek sekundy później odłamki lecą drugi raz
+    if (pOdlamkowa >= MAX_POZIOM_UMIEJETNOSCI) {
+      zaplanujAkcje(OPOZNIENIE_DRUGIEJ_SALWY_MS, () => {
+        if (graTrwa && cel.hp > 0) wystrzelOdlamki(cel, 1 + pOdlamkowa);
+        else if (graTrwa) { const inny = znajdzNajblizszegoWroga(); if (inny) wystrzelOdlamki(inny, 1 + pOdlamkowa); }
+      });
+    }
+  }
 
   const pMagiczna = poziomUmiejetnosci("magiczna");
   if (pMagiczna >= 0) {
@@ -1460,16 +1552,14 @@ function sprobujObrazenObszarowych(cel, dmg, staty1) {
     rundaStaty.magiczne += dmgMagiczne;
     rundaStaty.trucizna += dmgTrucizny;
     dodajDmgUmiejetnosci("ognista", dmgMagiczne);
+    wampiryzmZaklec(dmgMagiczne);
     dodajEfektAtaku(wrog.x, wrog.y, dmgWyswietlany, { magia: true, dmgTrucizny, xZrodla: cel.x, yZrodla: cel.y });
     if (wrog.hp <= 0) zabijWroga(wrog);
   });
 }
 
-function trafienieStrzalaGracza(cel, staty1, pocisk) {
-  const dmg = wykonajPojedynczyAtak(cel, staty1, pocisk.x, pocisk.y, pocisk.mnoznikPrzebicia);
-
-  sprobujObrazenObszarowych(cel, dmg, staty1);
-
+/* Affix "Ognista strzała": szansa na fizyczny wybuch wokół trafionego celu. */
+function procAffixuOgnistejStrzaly(cel, dmg, staty1) {
   if ((staty1.ognistaStrzala || 0) > 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
     dodajEfektWybuchu(cel.x, cel.y, PROMIEN_OGNIA);
     wrogowie.forEach(wrog => {
@@ -1488,15 +1578,25 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
       if (wrog.hp <= 0) zabijWroga(wrog);
     });
   }
+}
+
+function trafienieStrzalaGracza(cel, staty1, pocisk) {
+  const dmg = wykonajPojedynczyAtak(cel, staty1, pocisk.x, pocisk.y, pocisk.mnoznikPrzebicia);
+
+  sprobujObrazenObszarowych(cel, dmg, staty1);
+  procAffixuOgnistejStrzaly(cel, dmg, staty1);
 
   const pElektryczna = poziomUmiejetnosci("elektryczna");
   if (pElektryczna >= 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
+    const spowalnia = pElektryczna >= MAX_POZIOM_UMIEJETNOSCI;
+    if (spowalnia && cel.hp > 0) cel.spowolnionyDoCzasu = czasWirt() + CZAS_SPOWOLNIENIA_MS;
     let poprzedniCel = cel;
     const wykluczone = new Set([cel.id]);
     for (let i = 0; i < 1 + pElektryczna; i++) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
+      if (spowalnia) kolejnyCel.spowolnionyDoCzasu = czasWirt() + CZAS_SPOWOLNIENIA_MS;
       const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ, zrodlo: "elektryczna" });
       sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
@@ -1536,7 +1636,19 @@ function aktualizujPociskiGracza(dtMs) {
         const dystans = Math.hypot(wrog.x - pocisk.x, wrog.y - pocisk.y);
         if (dystans <= promienWroga(wrog) + PROMIEN_TRAFIENIA_STRZALY) {
           pocisk.trafieni.add(wrog.id);
-          trafienieStrzalaGracza(wrog, staty1, pocisk);
+          if (pocisk.typ === "boczna") {
+            const dmgBoczny = wykonajPojedynczyAtak(wrog, staty1, pocisk.x, pocisk.y, pocisk.mnoznikPrzebicia, { poboczny: true, mnoznikSkilla: pocisk.mnoznikSkilla });
+            // Max poziom Potrójnej: Ognista strzała (umiejętność i affix) w 80% skuteczności
+            if (poziomUmiejetnosci("potrojna") >= MAX_POZIOM_UMIEJETNOSCI && dmgBoczny > 0) {
+              const dmgEfektu = Math.round(dmgBoczny * MNOZNIK_EFEKTOW_POBOCZNYCH);
+              if (wrog.hp > 0) {
+                sprobujObrazenObszarowych(wrog, dmgEfektu, staty1);
+                procAffixuOgnistejStrzaly(wrog, dmgEfektu, staty1);
+              }
+            }
+          } else {
+            trafienieStrzalaGracza(wrog, staty1, pocisk);
+          }
           pocisk.mnoznikPrzebicia += WZROST_DMG_NA_PRZEBICIE;
           break;
         }
@@ -1644,7 +1756,7 @@ function aktualizujKrwawienieWrogow(teraz) {
     // Wzmocnienie krwawienia dodaje punkty procentowe NA SEKUNDĘ (np. 5% = +5 pp/s),
     // więc na jeden tik (0,5s) przypada połowa: 4% + 2,5% = 6,5% maks. PŻ.
     const procentTiku = KRWAWIENIE_TIK_PROCENT_HP + (wzmocnienieKrwawienia / 100) * (CZAS_TIKU_KRWAWIENIA_MS / 1000);
-    const dmg = Math.round(wrog.maxHp * procentTiku * mnoznikOdpornosci);
+    const dmg = Math.round(wrog.maxHp * procentTiku * mnoznikOdpornosci * (wrog.silaKrwawienia ?? 1));
     wrog.hp -= dmg;
     rundaStaty.obrazenia += dmg;
     rundaStaty.krwawienie += dmg;
@@ -1990,14 +2102,14 @@ function rysujGre() {
     ctx.beginPath();
     ctx.moveTo(xTyl, yTyl);
     ctx.lineTo(p.x, p.y);
-    ctx.strokeStyle = "#eaffd0";
+    ctx.strokeStyle = p.typ === "boczna" ? "#8fe36f" : "#eaffd0";
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = p.typ === "boczna" ? "#c9ffb0" : "#ffffff";
     ctx.fill();
   });
 
@@ -2254,7 +2366,7 @@ function nowaRundaStaty() {
     otrzymane: 0,
     magiczne: 0,         // część "obrazenia" zadana jako obrażenia magiczne (reszta = fizyczne)
     // Obrażenia zadane przez poszczególne umiejętności pasywne (tooltip w oknie umiejętności)
-    umiej: { elektryczna: 0, ognista: 0, odlamkowa: 0, magiczna: 0 }
+    umiej: { elektryczna: 0, ognista: 0, odlamkowa: 0, magiczna: 0, potrojna: 0, wampiryczna: 0 }
   };
 }
 

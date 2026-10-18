@@ -1,6 +1,7 @@
 /* ============================================================
    OKNO "UMIEJĘTNOŚCI PASYWNE"
-   Grafika tła: umiejetnosci-podglad.png (te same proporcje co wiki: 5:3).
+   Tło okna: wiki-podglad.png (to samo co wikipedia przedmiotów, 5:3).
+   Każda umiejętność to osobny kafelek PNG (.umiej-kafel).
    Wszystkie rozmiary czcionek w cqw — skalują się razem z oknem.
    ============================================================ */
 
@@ -19,14 +20,11 @@
 #umiejetnosci-overlay.visible { display: flex; }
 
 #umiejetnosci-okno {
-  /* Jedyne miejsce z nazwą pliku tła — używa go też szara nakładka ikon. */
-  --umiej-tlo: url("umiejetnosci-podglad.png");
-
   position: relative;
   width: min(94vw, 1500px, calc(88vh * 1.6666667));
   aspect-ratio: 5 / 3;
   container-type: inline-size;
-  background: var(--umiej-tlo) center / 100% 100% no-repeat;
+  background: url("wiki-podglad.png") center / 100% 100% no-repeat;
   filter: drop-shadow(0 12px 35px rgba(0, 0, 0, 0.9));
   font-family: Georgia, "Times New Roman", serif;
 }
@@ -63,14 +61,23 @@
 
 .umiej-monety.brak { animation: umiejBrak 0.35s ease; }
 
+/* Kafelek jednej umiejętności. Plik kafelka podaje JS w zmiennej --umiej-tlo
+   (używa jej też szara nakładka zablokowanych ikon). Rozmiar liczy JS (stylKafla). */
+.umiej-kafel {
+  position: absolute;
+  aspect-ratio: 970 / 405;
+  background: var(--umiej-tlo) center / 100% 100% no-repeat;
+}
+
 .umiej-nazwa {
   position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffd700;
-  font-size: 2.1cqw;
+  font-size: 1.75cqw;
   font-weight: bold;
+  white-space: nowrap;
   letter-spacing: 0.04em;
   text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.3);
   pointer-events: none;
@@ -137,8 +144,9 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 1cqw;
-  font-size: 1.8cqw;
+  margin-top: 0.6cqw;
+  font-size: 1.6cqw;
+  line-height: 1;
   font-weight: bold;
   white-space: nowrap;
   color: #ffd700;
@@ -156,13 +164,13 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 0.5cqw 0.8cqw;
+  padding: 0.3cqw 0.6cqw;
   overflow: hidden;
   text-align: center;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.25cqw;
+  font-size: 1.1cqw;
   font-weight: bold;
-  line-height: 1.25;
+  line-height: 1.2;
   color: #2c1505;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -193,6 +201,22 @@
   font-weight: bold;
   -webkit-text-stroke: 0.05cqw #000;
   paint-order: stroke fill;
+}
+
+/* Potrójna strzała bije fizycznie — wartość biała (granat = obrażenia magiczne) */
+.umiej-dmg.umiej-dmg-bialy {
+  color: #fff;
+  -webkit-text-stroke: 0.05cqw #000;
+}
+
+/* Bonus za maksymalny poziom: złoty tekst pod opisem, w tym samym prostokącie */
+.umiej-bonus {
+  margin-top: 0.35cqw;
+  color: #ffd700;
+  font-weight: bold;
+  -webkit-text-stroke: 0.05cqw #000;
+  paint-order: stroke fill;
+  text-shadow: 0 0 0.4cqw rgba(0, 0, 0, 0.7);
 }
 
 .umiej-lvl {
