@@ -38,8 +38,7 @@ const ARCYBOSS_DMG_MAX = 130000;
 const ARCYBOSS_POCISKI_PRZYROST = 2;
 const ARCYBOSS_POCISKI_MAX = 24;
 
-const UPG_BRON_WARTOSC_ATAKU = 500;   // ulepszenie broni: +500 Wartości ataku
-const UPG_BRON_OBR_UMIEJETNOSCI = 5;  // ulepszenie broni: +5% Obrażeń umiejętności
+const UPG_BRON_OBR_UMIEJETNOSCI = 6;  // ulepszenie broni: +6% Obrażeń umiejętności
 const ARCYBOSSY_DO_ULEPSZENIA = 4;
 const PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU = 200;
 const MNOZNIK_CZASU_SPAWNU_PO_ULEPSZENIU = 0.5;
@@ -79,9 +78,15 @@ const PROMIEN_WYBUCHU_MAGICZNEJ = PROMIEN_OGNIA * 1.6; // 1,6x zasięg Ognistej 
 const PROMIEN_WYBUCHU_MAGICZNEJ_MAX = PROMIEN_OGNIA * 2.2; // 2,2x po maksymalnym poziomie umiejętności
 const MAX_POZIOM_UMIEJETNOSCI = 4;
 const MNOZNIK_EFEKTOW_POBOCZNYCH = 0.8; // Potrójna (max): efekty z bocznych strzał w 80% skuteczności
-const SPOWOLNIENIE_ELEKTRYCZNEJ = 0.2;  // Elektryczna (max): -20% prędkości
-const CZAS_SPOWOLNIENIA_MS = 1000;
-const OPOZNIENIE_DRUGIEJ_SALWY_MS = 180; // Odłamkowa (max): druga salwa po ułamku sekundy
+// Elektryczna (max): każde ogniwo ma 25% szansy na +35% obrażeń ("krytyk" magiczny)
+const SZANSA_KRYTA_ELEKTRYCZNEJ = 25;
+const MNOZNIK_KRYTA_ELEKTRYCZNEJ = 1.35;
+// Ognista (max): wrogowie trafieni wybuchem płoną — 10% maks. PŻ w 3s, tik co 0,5s
+const PODPALENIE_PROCENT_HP = 0.10;
+const PODPALENIE_CZAS_MS = 3000;
+const PODPALENIE_CZAS_TIKU_MS = 500;
+const PODPALENIE_LICZBA_TIKOW = PODPALENIE_CZAS_MS / PODPALENIE_CZAS_TIKU_MS;
+const KOLOR_PODPALENIE = "#ff8c1a";
 const KOLOR_WYBUCHU_MAGICZNEJ = "170, 70, 255";      // fiolet
 const KOLOR_WYBUCHU_OGNIA = "255, 140, 26";
 const KOLOR_LINII_ELEKTRYCZNEJ = "255, 215, 0";      // złoty
@@ -103,6 +108,8 @@ const DMG_STYL_KRYT = { kolor: "#ffd700", rozmiar: 20 };
 const DMG_STYL_KRYT_PRZESZYWKA = { kolor: "#ff3b3b", rozmiar: 25 };
 const DMG_STYL_KRWAWIENIE = { kolor: "#ff5555", rozmiar: 14 };
 const DMG_STYL_MAGIA = { kolor: "#6ec8ff", rozmiar: 16 };
+const DMG_STYL_MAGIA_KRYT = { kolor: "#6ec8ff", rozmiar: 22 };   // Elektryczna (max): trafienie "krytyczne"
+const DMG_STYL_PODPALENIE = { kolor: KOLOR_PODPALENIE, rozmiar: 14 }; // jak krwawienie, pomarańczowe
 
 const canvas = document.getElementById("gra-canvas");
 const ctx = canvas.getContext("2d");
@@ -201,17 +208,17 @@ function obliczStatystyki(gracz) {
       if (nazwa === "Podstawowe PŻ") pz = val;
       else if (nazwa === "Podstawowe obrażenia") podstawoweObrażenia = val;
       else if (nazwa === "Obrażenia umiejętności" || nazwa === "Obrażenia umiejętności: +10%") obrazeniaUmiejetnosci += val;
-      else if (nazwa === "Szansa na kryta" || nazwa === "Szansa na kryta: 10%") kryt += val;
-      else if (nazwa === "Szansa na przeszywkę" || nazwa === "Szansa na przeszywkę: 10%") przeszywka += val;
-      else if (nazwa === "Szansa na omdlenie" || nazwa === "Szansa na omdlenie: 10%") omdlenie += val;
+      else if (nazwa === "Szansa na kryta" || nazwa === "Szansa na kryta: 5%") kryt += val;
+      else if (nazwa === "Szansa na przeszywkę" || nazwa === "Szansa na przeszywkę: 5%") przeszywka += val;
+      else if (nazwa === "Szansa na omdlenie" || nazwa === "Szansa na omdlenie: 5%") omdlenie += val;
       else if (nazwa === "Szansa na blok") blok += val;
-      else if (nazwa === "Szansa na otrucie" || nazwa === "Szansa na otrucie: 10%") otrucie += val;
+      else if (nazwa === "Szansa na otrucie" || nazwa === "Szansa na otrucie: 5%") otrucie += val;
       else if (nazwa === "Szansa na krwawienie") krwawienie += val;
       else if (nazwa === "Dodatkowe PŻ" || nazwa === "Dodatkowe PŻ: 4000") dodatkowePz += val;
-      else if (nazwa === "Wartość ataku" || nazwa === "Wartość ataku: +150") wartoscAtaku += val;
+      else if (nazwa === "Wartość ataku" || nazwa === "Wartość ataku: +500") wartoscAtaku += val;
       else if (nazwa === "Pancerz" || nazwa === "Pancerz: 35") pancerz += val;
       else if (nazwa === "Kradzież życia" || nazwa === "Kradzież życia: 5%") kradziezZycia += val;
-      else if (nazwa === "Ulepszenie broni") { wartoscAtaku += UPG_BRON_WARTOSC_ATAKU; obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
+      else if (nazwa === "Ulepszenie broni") { obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
@@ -234,7 +241,6 @@ function obliczStatystyki(gracz) {
   // Bonusy za maksymalny poziom umiejętności pasywnych (gracz 1)
   if (gracz === 1 && typeof poziomUmiejetnosci === "function") {
     if (poziomUmiejetnosci("wampiryczna") >= MAX_POZIOM_UMIEJETNOSCI) kradziezZycia += 5;
-    if (poziomUmiejetnosci("ognista") >= MAX_POZIOM_UMIEJETNOSCI) obrazeniaUmiejetnosci += 5;
   }
 
   const finalnePz = Math.round((pz + dodatkowePz) * (1 + wzmocnieniePz / 100));
@@ -286,13 +292,13 @@ const MAPA_ULEPSZEN_ITEMOW = {
   "helm": "Regeneracja PŻ 5%/sek",
   "zbroja": "Wskrzeszenie",
   "naramienniki": "Dodatkowe PŻ: 4000",
-  "rekawice": "Prędkość ataku: +35%",
+  "rekawice": "Wartość ataku: +500",
   "spodnie": "Pancerz: 35",
-  "kolczyki": "Szansa na kryta: 10%",
-  "naszyjnik": "Szansa na przeszywkę: 10%",
-  "bransoleta": "Szansa na otrucie: 10%",
-  "pierscien": "Szansa na omdlenie: 10%",
-  "strzala": "Kradzież życia: 5%"
+  "kolczyki": "Szansa na kryta: 5%",
+  "naszyjnik": "Szansa na przeszywkę: 5%",
+  "bransoleta": "Szansa na otrucie: 5%",
+  "pierscien": "Szansa na omdlenie: 5%",
+  "strzala": "Prędkość ataku: +35%"
 };
 
 let oczekiwanieNaUlepszenieItemu = false;
@@ -1027,8 +1033,6 @@ function promienWroga(wrog) {
 function aktualizujWroga(wrog, dtMs, teraz) {
   if (teraz < wrog.ogluszonyDoCzasu) return;
 
-  const mnoznikRuchu = teraz < (wrog.spowolnionyDoCzasu || 0) ? 1 - SPOWOLNIENIE_ELEKTRYCZNEJ : 1;
-
   const dx = postac.x - wrog.x;
   const dy = postac.y - wrog.y;
   const dystans = Math.hypot(dx, dy) || 1;
@@ -1044,8 +1048,8 @@ function aktualizujWroga(wrog, dtMs, teraz) {
   else zasieg = ZASIEG_MELEE;
 
   if (dystans > zasieg) {
-    wrog.x += (dx / dystans) * wrog.predkosc * mnoznikRuchu * (dtMs / 1000);
-    wrog.y += (dy / dystans) * wrog.predkosc * mnoznikRuchu * (dtMs / 1000);
+    wrog.x += (dx / dystans) * wrog.predkosc * (dtMs / 1000);
+    wrog.y += (dy / dystans) * wrog.predkosc * (dtMs / 1000);
     return;
   }
 
@@ -1360,7 +1364,9 @@ function wampiryzmZaklec(dmg) {
 function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
 
-  const baza = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * mnoznik;
+  // Elektryczna (max poziom): szansa na zwiększone obrażenia ("krytyk" magiczny)
+  const krytMagiczny = !!opcje.mozeKrytowac && losujProcent() < SZANSA_KRYTA_ELEKTRYCZNEJ;
+  const baza = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * mnoznik * (krytMagiczny ? MNOZNIK_KRYTA_ELEKTRYCZNEJ : 1);
   const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
   const { dmg, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe);
 
@@ -1374,6 +1380,7 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
 
   dodajEfektAtaku(cel.x, cel.y, dmgWyswietlany, {
     magia: true,
+    kryt: krytMagiczny,
     dmgTrucizny,
     xZrodla,
     yZrodla,
@@ -1506,11 +1513,13 @@ function atakGracza() {
   const pOdlamkowa = poziomUmiejetnosci("odlamkowa");
   if (pOdlamkowa >= 0) {
     wystrzelOdlamki(cel, 1 + pOdlamkowa);
-    // Max poziom: ułamek sekundy później odłamki lecą drugi raz
+    // Max poziom: druga salwa dokładnie w połowie między tym a następnym atakiem
+    // (czyli odłamki strzelają 2x częściej niż zwykły atak, także przy zmianie prędkości ataku)
     if (pOdlamkowa >= MAX_POZIOM_UMIEJETNOSCI) {
-      zaplanujAkcje(OPOZNIENIE_DRUGIEJ_SALWY_MS, () => {
-        if (graTrwa && cel.hp > 0) wystrzelOdlamki(cel, 1 + pOdlamkowa);
-        else if (graTrwa) { const inny = znajdzNajblizszegoWroga(); if (inny) wystrzelOdlamki(inny, 1 + pOdlamkowa); }
+      zaplanujAkcje(pobierzCzasAtakuGracza() / 2, () => {
+        if (!graTrwa) return;
+        const glowny = znajdzNajblizszegoWroga();
+        if (glowny) wystrzelOdlamki(glowny, 1 + pOdlamkowa);
       });
     }
   }
@@ -1554,6 +1563,33 @@ function sprobujObrazenObszarowych(cel, dmg, staty1) {
     dodajDmgUmiejetnosci("ognista", dmgMagiczne);
     wampiryzmZaklec(dmgMagiczne);
     dodajEfektAtaku(wrog.x, wrog.y, dmgWyswietlany, { magia: true, dmgTrucizny, xZrodla: cel.x, yZrodla: cel.y });
+    if (wrog.hp <= 0) { zabijWroga(wrog); return; }
+
+    // Max poziom: wrogowie trafieni wybuchem płoną (odświeża czas palenia)
+    if (pOgnista >= MAX_POZIOM_UMIEJETNOSCI) {
+      if (!(wrog.podpalenieTury > 0)) wrog.ostatniTikPodpalenia = czasWirt();
+      wrog.podpalenieTury = PODPALENIE_LICZBA_TIKOW;
+    }
+  });
+}
+
+/* Podpalenie (Ognista strzała, max poziom): 10% maks. PŻ w 3s, tiki co 0,5s. */
+function aktualizujPodpalenia(teraz) {
+  wrogowie.slice().forEach(wrog => {
+    if (wrog.hp <= 0 || !(wrog.podpalenieTury > 0)) return;
+    if (teraz - wrog.ostatniTikPodpalenia < PODPALENIE_CZAS_TIKU_MS) return;
+
+    wrog.ostatniTikPodpalenia = teraz;
+    wrog.podpalenieTury -= 1;
+
+    const dmg = Math.round(wrog.maxHp * PODPALENIE_PROCENT_HP / PODPALENIE_LICZBA_TIKOW * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+    if (dmg <= 0) return;
+    wrog.hp -= dmg;
+    rundaStaty.obrazenia += dmg;
+    rundaStaty.magiczne += dmg;
+    dodajDmgUmiejetnosci("ognista", dmg);
+
+    dodajEfektAtaku(wrog.x, wrog.y, dmg, { podpalenie: true, bezLinii: true });
     if (wrog.hp <= 0) zabijWroga(wrog);
   });
 }
@@ -1588,16 +1624,14 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
 
   const pElektryczna = poziomUmiejetnosci("elektryczna");
   if (pElektryczna >= 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
-    const spowalnia = pElektryczna >= MAX_POZIOM_UMIEJETNOSCI;
-    if (spowalnia && cel.hp > 0) cel.spowolnionyDoCzasu = czasWirt() + CZAS_SPOWOLNIENIA_MS;
+    const mozeKrytowac = pElektryczna >= MAX_POZIOM_UMIEJETNOSCI;
     let poprzedniCel = cel;
     const wykluczone = new Set([cel.id]);
     for (let i = 0; i < 1 + pElektryczna; i++) {
       const kolejnyCel = znajdzNajblizszegoWrogaOd(poprzedniCel, wykluczone);
       if (!kolejnyCel) break;
       wykluczone.add(kolejnyCel.id);
-      if (spowalnia) kolejnyCel.spowolnionyDoCzasu = czasWirt() + CZAS_SPOWOLNIENIA_MS;
-      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ, zrodlo: "elektryczna" });
+      const dmgOgniwa = wykonajAtakMagiczny(kolejnyCel, staty1, poprzedniCel.x, poprzedniCel.y, 1, { kolorLinii: KOLOR_LINII_ELEKTRYCZNEJ, zrodlo: "elektryczna", mozeKrytowac });
       sprobujObrazenObszarowych(kolejnyCel, dmgOgniwa, staty1);
       poprzedniCel = kolejnyCel;
     }
@@ -1771,6 +1805,7 @@ function aktywneKoloryWroga(wrog, teraz) {
   if (wrog.zatruteAtaki > 0) kolory.push(KOLOR_TRUCIZNA);
   if (teraz < wrog.ogluszonyDoCzasu) kolory.push(KOLOR_OMDLENIE);
   if (wrog.krwawienieTury > 0) kolory.push(KOLOR_KRWAWIENIE);
+  if (wrog.podpalenieTury > 0) kolory.push(KOLOR_PODPALENIE);
   return kolory;
 }
 
@@ -1928,9 +1963,15 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
   let styl;
   let prefix = "";
 
-  if (opcje.magia) {
+  if (opcje.magia && opcje.kryt) {
+    styl = DMG_STYL_MAGIA_KRYT;
+    prefix = "💥✨";
+  } else if (opcje.magia) {
     styl = DMG_STYL_MAGIA;
     prefix = "✨";
+  } else if (opcje.podpalenie) {
+    styl = DMG_STYL_PODPALENIE;
+    prefix = "🔥";
   } else if (opcje.krwawienie) {
     styl = DMG_STYL_KRWAWIENIE;
     prefix = "🩸";
@@ -2261,6 +2302,7 @@ function petlaGry(teraz) {
 
   wrogowie.forEach(wrog => aktualizujWroga(wrog, dtMs, czasWirtualny));
   aktualizujKrwawienieWrogow(czasWirtualny);
+  aktualizujPodpalenia(czasWirtualny);
   aktualizujPociski(dtMs);
   aktualizujPociskiGracza(dtMs);
   aktualizujEfekty(dtMs);
@@ -2516,7 +2558,12 @@ function zbudujWikiItem(item) {
   const ulepszenieHtml = tekstUlepszenia ? `<div class="wiki-ulepszenie">${wikiEsc(tekstUlepszenia)}</div>` : "";
   return `<article class="wiki-item"><img class="wiki-item-obraz" src="${wikiEsc(item.obraz)}" alt="${wikiEsc(item.nazwa)}"><div class="wiki-item-tresc"><div class="wiki-item-nazwa">${wikiEsc(item.nazwa)}</div>${affixyHtml}${ulepszenieHtml}</div></article>`;
 }
-function wypelnijWiki() { const grid = document.getElementById("wiki-grid"); if (!grid || typeof itemy === "undefined") return; grid.innerHTML = Object.values(itemy).map(zbudujWikiItem).join(""); }
+function wypelnijWiki() { const grid = document.getElementById("wiki-grid"); if (!grid || typeof itemy === "undefined") return; 
+  // Kolejność jak w ekwipunku (od lewej-góry, wiersz po wierszu) — jawna lista, niezależna od config.js.
+  const KOLEJNOSC_WIKI = ["strzala", "helm", "kolczyki", "naszyjnik", "rekawice", "zbroja", "naramienniki", "bransoleta", "bron", "spodnie", "buty", "pierscien"];
+  const miejsce = nazwa => { const i = KOLEJNOSC_WIKI.indexOf(nazwa); return i === -1 ? 999 : i; };
+  const wgEkwipunku = Object.values(itemy).slice().sort((a, b) => miejsce(a.nazwa) - miejsce(b.nazwa));
+  grid.innerHTML = wgEkwipunku.map(zbudujWikiItem).join(""); }
 /*
   Wikipedia pauzuje grę, ale tylko jeśli ta faktycznie trwała (nie była już
   spauzowana ręcznie, nie czekała na wybór ulepszenia i nie była nierozpoczęta).

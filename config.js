@@ -178,7 +178,7 @@ const itemy = {
     nazwa: "strzala",
     obraz: "strzala.png",
     pozycja: { kolumna: 1, wiersz: 1 },
-    // Pasywka "Zwykła strzała" jest stała. Ulepszenie strzały daje 5% Kradzieży życia.
+    // Pasywka "Zwykła strzała" jest stała. Ulepszenie strzały daje Prędkość ataku: +35%.
     staleAffixy: [ 
       "Wartość ataku",
       "Prędkość ataku",
@@ -221,12 +221,12 @@ const affixy = [
   { nazwa: "Dodatkowe PŻ: 4000", min: 4000, max: 4000, suffix: "", ulepszenie: true },
   { nazwa: "Prędkość ataku: +35%", min: 35, max: 35, suffix: "%", ulepszenie: true },
   { nazwa: "Pancerz: 35", min: 35, max: 35, suffix: "", ulepszenie: true },
-  { nazwa: "Szansa na kryta: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
-  { nazwa: "Szansa na przeszywkę: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
-  { nazwa: "Szansa na otrucie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
-  { nazwa: "Szansa na omdlenie: 10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
-  { nazwa: "Wartość ataku: +150", min: 150, max: 150, suffix: "", ulepszenie: true },
-  { nazwa: "Ulepszenie broni", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "Wartość ataku: +500, Obrażenia umiejętności: +5%" },
+  { nazwa: "Szansa na kryta: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
+  { nazwa: "Szansa na przeszywkę: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
+  { nazwa: "Szansa na otrucie: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
+  { nazwa: "Szansa na omdlenie: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
+  { nazwa: "Wartość ataku: +500", min: 500, max: 500, suffix: "", ulepszenie: true },
+  { nazwa: "Ulepszenie broni", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "Obrażenia umiejętności: +6%" },
   { nazwa: "Kradzież życia: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
 
   { 

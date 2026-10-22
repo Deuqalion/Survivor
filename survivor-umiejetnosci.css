@@ -211,12 +211,17 @@
 
 /* Bonus za maksymalny poziom: złoty tekst pod opisem, w tym samym prostokącie */
 .umiej-bonus {
-  margin-top: 0.35cqw;
+  margin-top: 0.05cqw;
   color: #ffd700;
   font-weight: bold;
-  -webkit-text-stroke: 0.05cqw #000;
+  -webkit-text-stroke: 0.14cqw #2a1206;
   paint-order: stroke fill;
-  text-shadow: 0 0 0.4cqw rgba(0, 0, 0, 0.7);
+  /* ciemnobrązowa, mocna poświata pod złotym napisem */
+  text-shadow:
+    0 0 0.3cqw #2a1206,
+    0 0 0.6cqw #2a1206,
+    0 0 0.9cqw rgba(42, 18, 6, 0.9),
+    0.08cqw 0.12cqw 0.15cqw #000;
 }
 
 .umiej-lvl {

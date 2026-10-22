@@ -72,7 +72,7 @@ const UMIEJETNOSCI = [
     nazwa: "Elektryczna strzała",
     plik: "elektryczna.png",
     kol: 0, wiersz: 0,
-    bonus: "Spowalnia wrogów.",
+    bonus: "Może trafić krytycznie.",
     opis: p => `Trafienia mają 33% szansy na zadanie <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych dodatkowym celom w ilości: <span class="umiej-lvl">${1 + p}</span>.`
   },
   {
@@ -80,7 +80,7 @@ const UMIEJETNOSCI = [
     nazwa: "Ognista strzała",
     plik: "ognista.png",
     kol: 1, wiersz: 0,
-    bonus: "Obrażenia umiejętności: 5%",
+    bonus: "Podpala wrogów.",
     opis: p => `Trafienia mają 33% szansy na zadanie <span class="umiej-lvl">${60 + 15 * p}%</span> obrażeń magicznych pobliskim wrogom.`
   },
   {
