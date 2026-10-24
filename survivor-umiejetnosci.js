@@ -39,7 +39,7 @@ const KOSZT_ULEPSZENIA_UMIEJETNOSCI = 120;
 
 /* Monety zdobywa się za zabójstwa (patrz zabijWroga w survivor-game.js).
    Na czas testów można tu wpisać więcej niż 0. */
-const MONETY_START = 0;
+const MONETY_START = 50000;
 let monety = MONETY_START;
 
 let umiejetnosciOtwarte = false;
