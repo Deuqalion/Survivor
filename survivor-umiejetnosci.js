@@ -39,7 +39,7 @@ const KOSZT_ULEPSZENIA_UMIEJETNOSCI = 120;
 
 /* Monety zdobywa się za zabójstwa (patrz zabijWroga w survivor-game.js).
    Na czas testów można tu wpisać więcej niż 0. */
-const MONETY_START = 50000;
+const MONETY_START = 40000;
 let monety = MONETY_START;
 
 let umiejetnosciOtwarte = false;
@@ -59,14 +59,21 @@ function statyUmiejetnosci() {
 
 /* Obrażenia magiczne pokazywane w opisach:
    (Podstawowe obrażenia + ilość zabitych) * mnożnik umiejętności * (1 + Obrażenia umiejętności %). */
-function dmgMagiczne(mnoznik) {
+function dmgMagiczne(mnoznik, podstawa) {
   const { podst, um } = statyUmiejetnosci();
   const zabici = (typeof bonusObrazenZZabojstw === "function") ? bonusObrazenZZabojstw() : 0;
-  return fmtUmiej((podst + zabici) * mnoznik * (1 + um / 100));
+  const baza = (podstawa !== undefined) ? podstawa : podst;   // podstawa = stała zamiast Podstawowych obrażeń (np. 700 dla Ognia)
+  return fmtUmiej((baza + zabici) * mnoznik * (1 + um / 100));
 }
 
-/* kol / wiersz = pozycja kafelka w siatce okna (patrz UMIEJ_KOLUMNY_X / UMIEJ_WIERSZE_Y) */
-const UMIEJETNOSCI = [
+/* Wewnętrzne identyfikatory 6 mechanik walki (używa ich survivor-game.js).
+   Każda broń (survivor-bronie.js) ma własny zestaw 6 umiejętności, które
+   podpinają się pod te mechaniki — id umiejętności = id mechaniki. */
+const UMIEJ_MECHANIKI = ["elektryczna", "ognista", "odlamkowa", "magiczna", "wampiryczna", "potrojna"];
+
+/* kol / wiersz = pozycja kafelka w siatce okna (patrz UMIEJ_KOLUMNY_X / UMIEJ_WIERSZE_Y)
+   Zestaw domyślny: ŁUK. */
+const UMIEJETNOSCI_LUK = [
   {
     id: "elektryczna",
     nazwa: "Elektryczna strzała",
@@ -110,16 +117,28 @@ const UMIEJETNOSCI = [
   {
     id: "potrojna",
     nazwa: "Potrójna strzała",
+    fizyczne: true,
     plik: "potrojna.png",
     kol: 0, wiersz: 2,
     bonus: "Nakłada efekty przy trafieniu.",
-    opis: p => `Wystrzeliwujesz 2 dodatkowe strzały, które zadają <span class="umiej-lvl">${20 + 15 * p}%</span> obrażeń fizycznych.`
+    opis: p => `Wystrzeliwujesz 2 dodatkowe strzały, które zadają <span class="umiej-lvl">${20 + 20 * p}%</span> obrażeń fizycznych.`
   }
 ];
 
+/* Aktualnie używany zestaw (zmienia go ustawZestawUmiejetnosci przy wyborze broni). */
+let UMIEJETNOSCI = UMIEJETNOSCI_LUK;
+
 /* poziom = ile ulepszeń (I–IV) kupiono; odblokowana = czy umiejętność kupiona */
 const umiejetnosciStan = {};
-UMIEJETNOSCI.forEach(u => { umiejetnosciStan[u.id] = { odblokowana: false, poziom: 0 }; });
+UMIEJ_MECHANIKI.forEach(id => { umiejetnosciStan[id] = { odblokowana: false, poziom: 0 }; });
+
+/* Podmienia zestaw umiejętności (wybór broni) i przebudowuje okno. */
+function ustawZestawUmiejetnosci(zestaw) {
+  UMIEJETNOSCI = zestaw;
+  UMIEJ_MECHANIKI.forEach(id => { umiejetnosciStan[id] = { odblokowana: false, poziom: 0 }; });
+  zbudujOknoUmiejetnosci();
+  odswiezUmiejetnosci();
+}
 
 /* ---------- pomocnicze: pozycje w % ---------- */
 
@@ -184,7 +203,10 @@ function zbudujOknoUmiejetnosci() {
   html += `<button class="umiej-zamknij" type="button" onclick="zamknijUmiejetnosci()"><img src="ZAMKNIJ.png" alt="ZAMKNIJ"></button>`;
 
   okno.innerHTML = html;
-  okno.addEventListener("click", obsluzKlikUmiejetnosci);
+  if (!okno.dataset.klikPodpiety) {          // przy przebudowie okna nie dubluj nasłuchu
+    okno.addEventListener("click", obsluzKlikUmiejetnosci);
+    okno.dataset.klikPodpiety = "1";
+  }
 
   // Najechanie na dużą ikonę: zamiast opisu pokazuje się "Zadane obrażenia"
   okno.querySelectorAll(".umiej-ikona").forEach(ikona => {
@@ -205,8 +227,10 @@ function trescZadanychObrazen(id) {
   const wartosc = fmtUmiej(zadaneObrazeniaUmiej(id));
   // Wampiryczna nic nie zadaje, tylko leczy; Potrójna bije fizycznie (nie magią)
   if (id === "wampiryczna") return `Wyleczone PŻ:<br>💚<span class="umiej-dmg umiej-dmg-duze">${wartosc}</span>`;
-  const ikona = id === "potrojna" ? "🏹" : "✨";
-  const kolor = id === "potrojna" ? " umiej-dmg-bialy" : ""; // fizyczne = białe, magiczne = granatowe
+  const def = UMIEJETNOSCI.find(x => x.id === id);
+  const fizyczna = !!(def && def.fizyczne);                  // Potrójna strzała / Ninjutsu bija fizycznie
+  const ikona = fizyczna ? "🏹" : "✨";
+  const kolor = fizyczna ? " umiej-dmg-bialy" : "";          // fizyczne = białe, magiczne = granatowe
   return `Zadane obrażenia:<br>${ikona}<span class="umiej-dmg umiej-dmg-duze${kolor}">${wartosc}</span>`;
 }
 
@@ -240,7 +264,7 @@ function dodajMonety(ile) {
 /* Nowa gra: monety i umiejętności wracają do stanu początkowego. */
 function resetujUmiejetnosci() {
   monety = MONETY_START;
-  UMIEJETNOSCI.forEach(u => { umiejetnosciStan[u.id] = { odblokowana: false, poziom: 0 }; });
+  UMIEJ_MECHANIKI.forEach(id => { umiejetnosciStan[id] = { odblokowana: false, poziom: 0 }; });
   odswiezUmiejetnosci();
 }
 
@@ -265,7 +289,8 @@ function odswiezUmiejetnosci() {
 
     const tekst = document.getElementById(`umiej-tekst-${u.id}`);
     if (tekst) {
-      const bonus = (s.odblokowana && s.poziom >= 4 && u.bonus) ? `<div class="umiej-bonus">${u.bonus}</div>` : "";
+      const bonusTxt = (typeof u.bonus === "function") ? u.bonus() : u.bonus;   // bonus może zależeć od statystyk (Ogień)
+      const bonus = (s.odblokowana && s.poziom >= 4 && bonusTxt) ? `<div class="umiej-bonus">${bonusTxt}</div>` : "";
       tekst.innerHTML = `<div class="umiej-tekst-wew umiej-tekst-opis">${u.opis(s.poziom)}${bonus}</div>` +
         `<div class="umiej-tekst-wew umiej-tekst-obr">${trescZadanychObrazen(u.id)}</div>`;
       tekst.classList.toggle("przygaszony", !s.odblokowana);

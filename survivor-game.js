@@ -1030,6 +1030,199 @@ function promienWroga(wrog) {
   return 10;
 }
 
+/* ---------- ROZSUWANIE WROGÓW ----------
+   Wrogowie nie mogą nakładać się całkowicie: maksymalne nałożenie to 40% średnicy
+   MNIEJSZEGO z dwóch wrogów (dla równych: odległość środków >= 1,2 promienia).
+   Dwa mechanizmy:
+   1) aktualizujWrogowZBlokowaniem — wróg nie może wejść głębiej w sąsiada, który jest
+      przed nim (mniejszy nie przepycha się przez większego ani równego),
+   2) rozsunWrogow — po ruchu rozsuwa pary, które i tak się nałożyły (spawn, boss
+      przepychający się przez tłum). Lżejsi ustępują bardziej niż duzi; ogłuszeni
+      (np. po Wskrzeszeniu) stoją w miejscu i to inni ich omijają. */
+const MAX_NALOZENIE_WROGOW = 0.4;
+const ITERACJE_ROZSUWANIA_WROGOW = 4;
+const KOMORKA_ROZSUWANIA_WROGOW = 28; // >= największy dystans pary małych wrogów (ok. 15 px) + zapas na ruch w klatce
+
+function promienKolizjiWroga(wrog) {
+  const r = promienWroga(wrog);
+  return wrog.typ === "ranged" ? r * MNOZNIK_ROZMIARU_TROJKATA : r; // trójkąty są rysowane większe
+}
+
+function minDystansWrogow(ri, rj) {
+  return ri + rj - 2 * MAX_NALOZENIE_WROGOW * Math.min(ri, rj);
+}
+
+/* Dane pomocnicze do rozsuwania/blokowania. Mali wrogowie (zwykli, ranged) trafiają do
+   siatki i szukają sąsiadów tylko w sąsiednich komórkach; duzi (boss, arcyboss — kilka
+   sztuk naraz) są sprawdzani bezpośrednio względem wszystkich. */
+const PROMIEN_MALEGO_WROGA_MAX = 20;
+const klucz_komorki_wrogow = (cx, cy) => (cx + 2000) * 10000 + (cy + 2000);
+
+function przygotujDaneWrogow(lista, teraz) {
+  const n = lista.length;
+  const promienie = new Array(n);
+  const masy = new Array(n);
+  const duzy = new Array(n);
+  const stoi = new Array(n);
+  const duzi = [];
+  const siatka = new Map();
+  const C = KOMORKA_ROZSUWANIA_WROGOW;
+
+  for (let i = 0; i < n; i++) {
+    const w = lista[i];
+    promienie[i] = promienKolizjiWroga(w);
+    masy[i] = promienie[i] * promienie[i];
+    duzy[i] = promienie[i] > PROMIEN_MALEGO_WROGA_MAX;
+    stoi[i] = teraz < w.ogluszonyDoCzasu;
+    if (duzy[i]) {
+      duzi.push(i);
+    } else {
+      const k = klucz_komorki_wrogow(Math.floor(w.x / C), Math.floor(w.y / C));
+      const komorka = siatka.get(k);
+      if (komorka) komorka.push(i); else siatka.set(k, [i]);
+    }
+  }
+  return { n, promienie, masy, duzy, stoi, duzi, siatka };
+}
+
+/* Ruch wszystkich wrogów z blokowaniem: ruch, który wciska wroga głębiej w nakładającego
+   się sąsiada (nie lżejszego od siebie), jest cofany. Bez tego tłum z tyłu dociskałby
+   pierwszy szereg i nie dałoby się utrzymać limitu nałożenia. */
+function aktualizujWrogowZBlokowaniem(dtMs, teraz) {
+  if (wrogowie.length < 2) {
+    wrogowie.forEach(wrog => aktualizujWroga(wrog, dtMs, teraz));
+    return;
+  }
+
+  const lista = wrogowie.slice();
+  const { n, promienie, masy, duzy, duzi, siatka } = przygotujDaneWrogow(lista, teraz);
+  const C = KOMORKA_ROZSUWANIA_WROGOW;
+
+  // czy ruch wroga i (z x0,y0 do obecnej pozycji) wciska go w sąsiada j?
+  const blokuje = (i, j, x0, y0) => {
+    if (j === i || masy[j] < masy[i]) return false; // większego/równego blokuje, mniejszego się przepycha
+    const w = lista[i];
+    const b = lista[j];
+    if (b.hp <= 0) return false;
+    const minDyst = minDystansWrogow(promienie[i], promienie[j]);
+    const dNowy = Math.sqrt((w.x - b.x) * (w.x - b.x) + (w.y - b.y) * (w.y - b.y));
+    if (dNowy >= minDyst) return false;
+    const dStary = Math.sqrt((x0 - b.x) * (x0 - b.x) + (y0 - b.y) * (y0 - b.y));
+    return dNowy < dStary - 1e-6;
+  };
+
+  for (let i = 0; i < n; i++) {
+    const w = lista[i];
+    const x0 = w.x;
+    const y0 = w.y;
+    aktualizujWroga(w, dtMs, teraz);
+    if (w.x === x0 && w.y === y0) continue;
+
+    let zablokowany = false;
+
+    // duzi sąsiedzi (dla dużego ruszającego się: tylko inni duzi)
+    for (const j of duzi) {
+      if (blokuje(i, j, x0, y0)) { zablokowany = true; break; }
+    }
+
+    // mali sąsiedzi z siatki (tylko dla małego ruszającego się: duży i tak ich przepycha)
+    if (!zablokowany && !duzy[i]) {
+      const cx0 = Math.floor(w.x / C);
+      const cy0 = Math.floor(w.y / C);
+      for (let cx = cx0 - 1; cx <= cx0 + 1 && !zablokowany; cx++) {
+        for (let cy = cy0 - 1; cy <= cy0 + 1 && !zablokowany; cy++) {
+          const komorka = siatka.get(klucz_komorki_wrogow(cx, cy));
+          if (!komorka) continue;
+          for (const j of komorka) {
+            if (blokuje(i, j, x0, y0)) { zablokowany = true; break; }
+          }
+        }
+      }
+    }
+
+    if (zablokowany) { w.x = x0; w.y = y0; }
+  }
+}
+
+/* Rozsuwa pary, które się nałożyły ponad limit. Kilka iteracji na klatkę. */
+function rozsunWrogow(teraz) {
+  if (wrogowie.length < 2) return;
+
+  const lista = wrogowie;
+  const { n, promienie, masy, duzy, stoi, duzi, siatka } = przygotujDaneWrogow(lista, teraz);
+  const C = KOMORKA_ROZSUWANIA_WROGOW;
+
+  // Rozwiązuje jedną parę; zwraca true, jeśli ktoś został przesunięty.
+  const rozwiaz = (i, j) => {
+    if (stoi[i] && stoi[j]) return false;
+
+    const a = lista[i];
+    const b = lista[j];
+    const minDyst = minDystansWrogow(promienie[i], promienie[j]);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= minDyst * minDyst) return false;
+
+    let d = Math.sqrt(d2);
+    let nx, ny;
+    if (d < 0.0001) {
+      // identyczna pozycja: rozsuń w deterministycznym kierunku
+      const kat = a.id * 2.399963 + b.id * 0.7;
+      nx = Math.cos(kat);
+      ny = Math.sin(kat);
+      d = 0;
+    } else {
+      nx = dx / d;
+      ny = dy / d;
+    }
+
+    const nalozenie = minDyst - d;
+    let udzialA, udzialB;
+    if (stoi[i]) { udzialA = 0; udzialB = 1; }
+    else if (stoi[j]) { udzialA = 1; udzialB = 0; }
+    else { udzialA = masy[j] / (masy[i] + masy[j]); udzialB = 1 - udzialA; }
+
+    a.x -= nx * nalozenie * udzialA;
+    a.y -= ny * nalozenie * udzialA;
+    b.x += nx * nalozenie * udzialB;
+    b.y += ny * nalozenie * udzialB;
+    return true;
+  };
+
+  for (let iteracja = 0; iteracja < ITERACJE_ROZSUWANIA_WROGOW; iteracja++) {
+    let cosPrzesunieto = false;
+
+    // mali – mali (przez siatkę z pozycji początkowych; przesunięcia są małe, komórka ma 48 px)
+    for (let i = 0; i < n; i++) {
+      if (duzy[i]) continue;
+      const a = lista[i];
+      const cx0 = Math.floor(a.x / C);
+      const cy0 = Math.floor(a.y / C);
+      for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) {
+        for (let cy = cy0 - 1; cy <= cy0 + 1; cy++) {
+          const komorka = siatka.get(klucz_komorki_wrogow(cx, cy));
+          if (!komorka) continue;
+          for (const j of komorka) {
+            if (j <= i) continue; // każdą parę raz
+            if (rozwiaz(i, j)) cosPrzesunieto = true;
+          }
+        }
+      }
+    }
+
+    // duzi – wszyscy (każdą parę raz)
+    for (const k of duzi) {
+      for (let j = 0; j < n; j++) {
+        if (j === k || (duzy[j] && j < k)) continue;
+        if (rozwiaz(k, j)) cosPrzesunieto = true;
+      }
+    }
+
+    if (!cosPrzesunieto) break;
+  }
+}
+
 function aktualizujWroga(wrog, dtMs, teraz) {
   if (teraz < wrog.ogluszonyDoCzasu) return;
 
@@ -1048,8 +1241,9 @@ function aktualizujWroga(wrog, dtMs, teraz) {
   else zasieg = ZASIEG_MELEE;
 
   if (dystans > zasieg) {
-    wrog.x += (dx / dystans) * wrog.predkosc * (dtMs / 1000);
-    wrog.y += (dy / dystans) * wrog.predkosc * (dtMs / 1000);
+    const tempo = teraz < (wrog.spowolnionyDoCzasu || 0) ? 1 - (wrog.silaSpowolnienia || 0) : 1;
+    wrog.x += (dx / dystans) * wrog.predkosc * tempo * (dtMs / 1000);
+    wrog.y += (dy / dystans) * wrog.predkosc * tempo * (dtMs / 1000);
     return;
   }
 
@@ -1254,6 +1448,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   rundaStaty.obrazenia += dmg;
   rundaStaty.ataki += 1;
+  if (opcje.zrodloDmg) dodajDmgUmiejetnosci(opcje.zrodloDmg, dmg);   // np. Ninjutsu / Rykoszet Shurikena
   if (kryt) rundaStaty.kryty += 1;
   if (przeszywkaAktywna) rundaStaty.przeszywki += 1;
   if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
@@ -1306,7 +1501,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     return dmg;
   }
 
-  if (losujProcent() < (staty1.otrucie || 0)) { cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW; cel.silaTrucizny = 1; }
+  if (losujProcent() < (staty1.otrucie || 0)) { cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW; cel.silaTrucizny = opcje.silaEfektow ?? 1; }
   // ARCYBOSSY są odporne na omdlenie (zwykłe moby i Bossy nie).
   if (cel.typ !== "arcyboss" && losujProcent() < (staty1.omdlenie || 0)) {
     cel.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
@@ -1317,7 +1512,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
     if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
     cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
-    cel.silaKrwawienia = 1;
+    cel.silaKrwawienia = opcje.silaEfektow ?? 1;
   }
 
   if (cel.hp <= 0) zabijWroga(cel);
@@ -1365,8 +1560,15 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
   if (!cel || cel.hp <= 0) return 0;
 
   // Elektryczna (max poziom): szansa na zwiększone obrażenia ("krytyk" magiczny)
-  const krytMagiczny = !!opcje.mozeKrytowac && losujProcent() < SZANSA_KRYTA_ELEKTRYCZNEJ;
-  const baza = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * mnoznik * (krytMagiczny ? MNOZNIK_KRYTA_ELEKTRYCZNEJ : 1);
+  // Szansa i siła "krytyka" magicznego: Elektryczna strzała (25%, +35%) albo Miny Pistoletu (Szansa na kryta, +50%)
+  let szansaKrytuMagii = opcje.mozeKrytowac ? SZANSA_KRYTA_ELEKTRYCZNEJ : 0;
+  let mnoznikKrytuMagii = MNOZNIK_KRYTA_ELEKTRYCZNEJ;
+  const bonusKrytu = (typeof bonusKrytuMagii === "function") ? bonusKrytuMagii(staty1) : null;
+  if (bonusKrytu) { szansaKrytuMagii = bonusKrytu.szansa; mnoznikKrytuMagii = bonusKrytu.mnoznik; }
+  const krytMagiczny = szansaKrytuMagii > 0 && losujProcent() < szansaKrytuMagii;
+  // (Podstawowe obrażenia + zabici); opcje.podstawa podmienia "Podstawowe obrażenia" (np. 700 dla wybuchu Ognia)
+  const podstawaObrazen = opcje.podstawa ?? (staty1.podstawoweObrażenia || 3000);
+  const baza = (podstawaObrazen + bonusObrazenZZabojstw()) * mnoznik * (krytMagiczny ? mnoznikKrytuMagii : 1);
   const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
   const { dmg, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe);
 
@@ -1477,6 +1679,13 @@ function atakGracza() {
   const cel = znajdzNajblizszegoWroga();
   if (!cel) return;
 
+  // Kostur: własny atak (koło) i własne umiejętności — survivor-kostur.js
+  if (typeof czyKostur === "function" && czyKostur()) { atakKostura(cel, staty1); return; }
+  // Pistolet: własny atak i umiejętności — survivor-pistolet.js
+  if (typeof czyPistolet === "function" && czyPistolet()) { atakPistoletu(cel, staty1); return; }
+  // Shuriken: własny atak i umiejętności — survivor-shuriken.js
+  if (typeof czyShuriken === "function" && czyShuriken()) { atakShurikena(cel, staty1); return; }
+
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
   const dlugosc = Math.hypot(dx, dy) || 1;
@@ -1505,7 +1714,7 @@ function atakGracza() {
         dy: ux * Math.sin(kat) + uy * Math.cos(kat),
         trafieni: new Set(),
         mnoznikPrzebicia: 1,
-        mnoznikSkilla: (20 + 15 * pPotrojna) / 100
+        mnoznikSkilla: (20 + 20 * pPotrojna) / 100
       });
     });
   }
@@ -1582,7 +1791,7 @@ function aktualizujPodpalenia(teraz) {
     wrog.ostatniTikPodpalenia = teraz;
     wrog.podpalenieTury -= 1;
 
-    const dmg = Math.round(wrog.maxHp * PODPALENIE_PROCENT_HP / PODPALENIE_LICZBA_TIKOW * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+    const dmg = Math.round(wrog.maxHp * (wrog.podpalenieProcent ?? PODPALENIE_PROCENT_HP) / PODPALENIE_LICZBA_TIKOW * (wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
     if (dmg <= 0) return;
     wrog.hp -= dmg;
     rundaStaty.obrazenia += dmg;
@@ -1641,6 +1850,9 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
 function aktualizujPociskiGracza(dtMs) {
   const staty1 = stan[1].staty;
   pociskiGracza = pociskiGracza.filter(pocisk => {
+    if (typeof jestPociskKostura === "function" && jestPociskKostura(pocisk)) return aktualizujPociskKostura(pocisk, dtMs, staty1);
+    if (typeof jestPociskPistoletu === "function" && jestPociskPistoletu(pocisk)) return aktualizujPociskPistoletu(pocisk, dtMs, staty1);
+    if (typeof jestPociskShurikena === "function" && jestPociskShurikena(pocisk)) return aktualizujPociskShurikena(pocisk, dtMs, staty1);
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
 
@@ -1806,6 +2018,7 @@ function aktywneKoloryWroga(wrog, teraz) {
   if (teraz < wrog.ogluszonyDoCzasu) kolory.push(KOLOR_OMDLENIE);
   if (wrog.krwawienieTury > 0) kolory.push(KOLOR_KRWAWIENIE);
   if (wrog.podpalenieTury > 0) kolory.push(KOLOR_PODPALENIE);
+  if (teraz < (wrog.spowolnionyDoCzasu || 0)) kolory.push("#7fe0ff");
   return kolory;
 }
 
@@ -2097,6 +2310,9 @@ function rysujGre() {
   });
 
   pociskiGracza.forEach(p => {
+    if (typeof rysujPociskKostura === "function" && rysujPociskKostura(p)) return;
+    if (typeof rysujPociskPistoletu === "function" && rysujPociskPistoletu(p)) return;
+    if (typeof rysujPociskShurikena === "function" && rysujPociskShurikena(p)) return;
     if (p.typ === "magiczna") {
       // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
       const r = 7;
@@ -2167,6 +2383,8 @@ function rysujGre() {
       ctx.lineWidth = 2;
       ctx.strokeStyle = `rgba(${e.rgb || KOLOR_WYBUCHU_OGNIA}, ${0.9 * alpha})`;
       ctx.stroke();
+    } else if (e.typ === "piorun") {
+      rysujPiorun(e);
     } else if (e.typ === "linia") {
       ctx.beginPath();
       ctx.moveTo(e.x1, e.y1);
@@ -2299,8 +2517,12 @@ function petlaGry(teraz) {
   }
 
   przetworzZaplanowaneAkcje();
+  if (typeof aktualizujKostura === "function") aktualizujKostura(dtMs);
+  if (typeof aktualizujPistoletu === "function") aktualizujPistoletu(dtMs);
+  if (typeof aktualizujShurikena === "function") aktualizujShurikena(dtMs);
 
-  wrogowie.forEach(wrog => aktualizujWroga(wrog, dtMs, czasWirtualny));
+  aktualizujWrogowZBlokowaniem(dtMs, czasWirtualny);
+  rozsunWrogow(czasWirtualny);
   aktualizujKrwawienieWrogow(czasWirtualny);
   aktualizujPodpalenia(czasWirtualny);
   aktualizujPociski(dtMs);
@@ -2313,6 +2535,10 @@ function petlaGry(teraz) {
 }
 
 function rozpocznijGre() {
+  // Po porażce START najpierw otwiera okno wyboru broni (survivor-bronie.js),
+  // a po wyborze samo uruchamia grę.
+  if (typeof wymagajWyboruBroniPrzedStartem === "function" && wymagajWyboruBroniPrzedStartem()) return;
+
   if (!stan[1].staty || Object.keys(stan[1].wylosowane).length === 0) {
     log("⚠️ Wylosuj najpierw ekwipunek!", "log-info");
     return;
@@ -2334,6 +2560,9 @@ function rozpocznijGre() {
   zegarGryMs = 0;
   zaplanowaneAkcje = [];
   licznikAtakowMagicznej = 0;
+  if (typeof resetujKostura === "function") resetujKostura();
+  if (typeof resetujPistoletu === "function") resetujPistoletu();
+  if (typeof resetujShurikena === "function") resetujShurikena();
   if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();
@@ -2510,6 +2739,7 @@ function zakonczGre(wygrana) {
   graTrwa = false;
   graWToku = false;
   ustawPrzyciski("przed");
+  if (typeof resetujWyborBroni === "function") resetujWyborBroni();
 
   if (!wygrana) {
     stan[1].zmianki = 0;

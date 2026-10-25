@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="survivor.css">
   <link rel="stylesheet" href="survivor-umiejetnosci.css">
+  <link rel="stylesheet" href="survivor-bronie.css">
 </head>
 
 <body>
@@ -162,6 +163,14 @@
     <section id="umiejetnosci-okno" role="dialog" aria-modal="true" aria-label="Umiejętności pasywne"></section>
   </div>
 
+  <!-- ================= WYBÓR BRONI (zawartość buduje survivor-bronie.js) ================= -->
+  <div id="wybor-broni-overlay" aria-hidden="true">
+    <section id="wybor-broni-okno" role="dialog" aria-modal="true" aria-label="Wybór broni">
+      <h1 class="wybor-broni-tytul">WYBIERZ BROŃ</h1>
+      <div id="wybor-broni-karty"></div>
+    </section>
+  </div>
+
   <!-- TOOLTIP 401x704 (poza sceną — skalowany osobno przez --skala) -->
   <div id="tooltip" class="tooltip">
     <img id="tooltip-item" class="tooltip-item" src="" alt="">
@@ -175,7 +184,11 @@
   <script src="statystyki.js"></script>
   <script src="survivor-stats.js"></script>
   <script src="survivor-game.js"></script>
+  <script src="survivor-kostur.js"></script>
+  <script src="survivor-pistolet.js"></script>
+  <script src="survivor-shuriken.js"></script>
   <script src="survivor-umiejetnosci.js"></script>
+  <script src="survivor-bronie.js"></script>
 
 </body>
 </html>
