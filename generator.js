@@ -15,6 +15,16 @@ function znajdzAffix(nazwa) {
   return affixy.find(affix => affix.nazwa === nazwa);
 }
 
+/* Definicja affixu z uwzględnieniem zakresu specyficznego dla itemu
+   (itemy[id].zakresy = { "Nazwa affixu": { min, max } }) — np. Księga ma "Obrażenia umiejętności" 0–5%. */
+function definicjaDlaItemu(itemId, nazwa) {
+  const def = znajdzAffix(nazwa);
+  if (!def) return def;
+  const item = itemy[itemId];
+  const zakres = item && item.zakresy && item.zakresy[nazwa];
+  return zakres ? Object.assign({}, def, zakres) : def;
+}
+
 function maksymalnaLiczbaAffixow(item) {
   if (item.nazwa === "strzala") return 3;
   if (item.nazwa === "strzaly") return 4;
@@ -55,7 +65,7 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
 
   for (const nazwaStalegoAffixu of staleAffixy) {
     if (wynik.length >= liczbaAffixow) break;
-    const definicja = znajdzAffix(nazwaAffixuZUlepszenia(itemId, nazwaStalegoAffixu));
+    const definicja = definicjaDlaItemu(itemId, nazwaAffixuZUlepszenia(itemId, nazwaStalegoAffixu));
     if (!definicja) continue;
 
     let wartosc;
@@ -91,7 +101,7 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
   }
 
   let dostepne = item.mozliweAffixy
-    .map(nazwa => znajdzAffix(nazwa))
+    .map(nazwa => definicjaDlaItemu(itemId, nazwa))
     .filter(Boolean)
     .filter(affix => !staleAffixy.includes(affix.nazwa))
     .filter(affix => !wynik.some(w => w.nazwa === affix.nazwa));
@@ -130,14 +140,14 @@ function dodajJedenNowyAffix(gracz, itemId) {
   for (const nazwaStalegoAffixu of staleAffixy) {
     const nazwaDocelowa = nazwaAffixuZUlepszenia(itemId, nazwaStalegoAffixu);
     if (!uzywaneNazwy.has(nazwaDocelowa)) {
-      wybranaDefinicja = znajdzAffix(nazwaDocelowa);
+      wybranaDefinicja = definicjaDlaItemu(itemId, nazwaDocelowa);
       break;
     }
   }
 
   if (!wybranaDefinicja) {
     const dostepne = item.mozliweAffixy
-      .map(nazwa => znajdzAffix(nazwa))
+      .map(nazwa => definicjaDlaItemu(itemId, nazwa))
       .filter(Boolean)
       .filter(affix => !uzywaneNazwy.has(affix.nazwa));
 
@@ -287,7 +297,7 @@ function pokazTooltip(gracz, itemId) {
   }
 
   affixyItemu.forEach(affix => {
-    const definicja = znajdzAffix(affix.nazwa);
+    const definicja = definicjaDlaItemu(itemId, affix.nazwa);
     const czyMax = definicja && affix.wartosc === definicja.max;
     const div = document.createElement("div");
 

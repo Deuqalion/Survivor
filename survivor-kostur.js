@@ -34,6 +34,7 @@ const KOSTUR_PREDKOSC_GLAZU = 650;
 const PROMIEN_WYBUCHU_ZIEMI = PROMIEN_OGNIA * 2;        // 2x zasięg obrażeń obszarowych
 const KOLOR_WYBUCHU_ZIEMI = "90, 200, 70";              // zielony
 const KOSTUR_SZANSA_OMDLENIA_ZIEMI = 33;
+const KOSTUR_CZAS_PLAMY_ZIEMI_MS = 2000;
 const KOSTUR_CZAS_OMDLENIA_ZIEMI_MS = 1000;
 
 /* Powietrze */
@@ -41,6 +42,7 @@ const KOSTUR_POWIETRZE_CZAS_MS = 8000;
 const KOSTUR_PREDKOSC_TORNADA = 260;
 const KOSTUR_PROMIEN_TORNADA = 36;
 const KOSTUR_ODSTEP_TORNAD_MS = 250;                    // kolejne tornada z jednej salwy startują co 0,25s
+const KOSTUR_TORNADO_OFFSET = 10;                       // losowe przesunięcie toru od środka areny (px)
 const KOSTUR_SPOWOLNIENIE = 0.2;
 const KOSTUR_CZAS_SPOWOLNIENIA_MS = 3000;
 
@@ -57,6 +59,7 @@ const KOSTUR_TYPY_POCISKOW = ["kolo", "ziemia", "fala", "tornado"];
 let kosturZiemiaMs = 0;
 let kosturWodaMs = 0;
 let kosturPowietrzeMs = 0;
+let plamyZiemi = [];                                    // wizualne ślady po uderzeniach głazu
 
 function czyKostur() {
   return typeof aktualnaBron !== "undefined" && aktualnaBron === "kostur";
@@ -70,6 +73,7 @@ function resetujKostura() {
   kosturZiemiaMs = KOSTUR_ZIEMIA_CZAS_BAZA_S * 1000;
   kosturWodaMs = KOSTUR_WODA_CZAS_BAZA_S * 1000;
   kosturPowietrzeMs = KOSTUR_POWIETRZE_CZAS_MS;
+  plamyZiemi = [];
 }
 
 function naAreniePoz(p, margines = 60) {
@@ -102,18 +106,23 @@ function sprobujPodpalenia(cel) {
 function atakKostura(cel, staty1) {
   // Piorun (kupiony): atak leci naraz w (2 + poziom) najbliższych wrogów
   const pPiorun = poziomUmiejetnosci("elektryczna");
-  const cele = pPiorun >= 0 ? znajdzNajblizszychWrogow(2 + pPiorun, new Set()) : [cel];
+  // Główny atak przebija wrogów (jak strzała łuku); dodatkowe ataki z Pioruna trafiają tylko pierwszy cel.
+  const dodatkowe = pPiorun >= 0 ? znajdzNajblizszychWrogow(1 + pPiorun, new Set([cel.id])) : [];
+  const cele = [{ c: cel, przebija: true }, ...dodatkowe.map(c => ({ c, przebija: false }))];
 
-  cele.forEach(c => {
+  cele.forEach(({ c, przebija }) => {
     const dx = c.x - postac.x;
     const dy = c.y - postac.y;
     const d = Math.hypot(dx, dy) || 1;
-    pociskiGracza.push({ typ: "kolo", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d });
+    pociskiGracza.push({
+      typ: "kolo", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d,
+      trafieni: new Set(), mnoznikPrzebicia: 1, przebija
+    });
   });
 }
 
 function trafienieKolem(wrog, staty1, p) {
-  const dmg = wykonajPojedynczyAtak(wrog, staty1, p.x, p.y, 1);
+  const dmg = wykonajPojedynczyAtak(wrog, staty1, p.x, p.y, p.mnoznikPrzebicia);
   procAffixuOgnistejStrzaly(wrog, dmg, staty1);   // affix "Ognista strzała" z ekwipunku działa jak zawsze
   procPioruna(wrog, staty1);
   procWybuchuZwyklegoAtaku(wrog, staty1);
@@ -170,6 +179,17 @@ function dodajPiorun(x, y) {
 
 function rysujPiorun(e) {
   const alpha = Math.max(0, e.zycie / e.zycieMax);
+  const p0 = e.punkty[0], pN = e.punkty[e.punkty.length - 1];
+
+  // góra błyskawicy jest przezroczysta i stopniowo "wchodzi" w pełną widoczność ku celowi
+  const gradient = (kolorRgb, a) => {
+    const g = ctx.createLinearGradient(p0.x, p0.y, pN.x, pN.y);
+    g.addColorStop(0, `rgba(${kolorRgb}, 0)`);
+    g.addColorStop(0.45, `rgba(${kolorRgb}, ${a * 0.55})`);
+    g.addColorStop(1, `rgba(${kolorRgb}, ${a})`);
+    return g;
+  };
+
   ctx.save();
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
@@ -178,14 +198,14 @@ function rysujPiorun(e) {
 
   ctx.beginPath();
   e.punkty.forEach((pt, i) => (i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
-  ctx.strokeStyle = `rgba(${KOLOR_PIORUNA}, ${alpha})`;
+  ctx.strokeStyle = gradient(KOLOR_PIORUNA, alpha);
   ctx.lineWidth = 5;
   ctx.stroke();
 
   ctx.shadowBlur = 0;
   ctx.beginPath();
   e.punkty.forEach((pt, i) => (i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
-  ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+  ctx.strokeStyle = gradient("255, 255, 255", alpha);
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
@@ -221,6 +241,7 @@ function wystrzelGlaz() {
 function wybuchZiemi(x, y, staty1) {
   const maks = poziomUmiejetnosci("odlamkowa") >= MAX_POZIOM_UMIEJETNOSCI;
   dodajEfektWybuchu(x, y, PROMIEN_WYBUCHU_ZIEMI, KOLOR_WYBUCHU_ZIEMI);
+  dodajPlameZiemi(x, y);
 
   wrogowie.slice().forEach(w => {
     if (w.hp <= 0 || Math.hypot(x - w.x, y - w.y) > PROMIEN_WYBUCHU_ZIEMI) return;
@@ -231,6 +252,72 @@ function wybuchZiemi(x, y, staty1) {
       w.ogluszonyDoCzasu = czasWirt() + KOSTUR_CZAS_OMDLENIA_ZIEMI_MS;
       rundaStaty.omdlenia += 1;
     }
+  });
+}
+
+/* Popękany, lekko ciemny obszar imitujący uderzenie w ziemię (rysowany POD wrogami, zanika). */
+function dodajPlameZiemi(x, y) {
+  const R = PROMIEN_WYBUCHU_ZIEMI;
+  const pekniecia = [];
+  const glowne = 10;
+  for (let i = 0; i < glowne; i++) {
+    let kat = (i / glowne) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    let r = R * 0.06;
+    const dlugosc = R * (0.55 + Math.random() * 0.4);
+    const punkty = [{ x: Math.cos(kat) * r, y: Math.sin(kat) * r }];
+    while (r < dlugosc) {
+      r += R * (0.07 + Math.random() * 0.07);
+      kat += (Math.random() - 0.5) * 0.55;
+      punkty.push({ x: Math.cos(kat) * r, y: Math.sin(kat) * r });
+    }
+    pekniecia.push({ punkty, szer: 2.2 });
+
+    // odnoga od środka pęknięcia
+    if (punkty.length > 3 && Math.random() < 0.7) {
+      const start = punkty[Math.floor(punkty.length * (0.35 + Math.random() * 0.3))];
+      let k2 = kat + (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.5);
+      let rr = Math.hypot(start.x, start.y);
+      const odnoga = [{ x: start.x, y: start.y }];
+      const koniec = rr + R * (0.12 + Math.random() * 0.2);
+      let px = start.x, py = start.y;
+      while (rr < koniec) {
+        rr += R * 0.06;
+        k2 += (Math.random() - 0.5) * 0.6;
+        px += Math.cos(k2) * R * 0.06;
+        py += Math.sin(k2) * R * 0.06;
+        odnoga.push({ x: px, y: py });
+      }
+      pekniecia.push({ punkty: odnoga, szer: 1.2 });
+    }
+  }
+  plamyZiemi.push({ x, y, zycie: KOSTUR_CZAS_PLAMY_ZIEMI_MS, zycieMax: KOSTUR_CZAS_PLAMY_ZIEMI_MS, pekniecia });
+}
+
+function rysujPlamyZiemi() {
+  plamyZiemi.forEach(pl => {
+    const R = PROMIEN_WYBUCHU_ZIEMI;
+    const alpha = Math.min(1, pl.zycie / 500);                  // ostatnie 0,5 s: zanikanie
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const g = ctx.createRadialGradient(pl.x, pl.y, 0, pl.x, pl.y, R);
+    g.addColorStop(0, "rgba(25, 18, 10, 0.42)");
+    g.addColorStop(0.7, "rgba(25, 18, 10, 0.28)");
+    g.addColorStop(1, "rgba(25, 18, 10, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(pl.x, pl.y, R, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(8, 5, 2, 0.8)";
+    pl.pekniecia.forEach(pk => {
+      ctx.lineWidth = pk.szer;
+      ctx.beginPath();
+      pk.punkty.forEach((pt, i) => (i === 0 ? ctx.moveTo(pl.x + pt.x, pl.y + pt.y) : ctx.lineTo(pl.x + pt.x, pl.y + pt.y)));
+      ctx.stroke();
+    });
+    ctx.restore();
   });
 }
 
@@ -248,8 +335,11 @@ function wystrzelTornada() {
   else { t -= w; x = -m; y = h - t; }
 
   // kierunek przez środek; kończy lot w punkcie symetrycznym (naprzeciwległa ściana)
-  const dx = w / 2 - x;
-  const dy = h / 2 - y;
+  // przez środek areny z losowym przesunięciem do 10 px
+  const kOff = Math.random() * Math.PI * 2;
+  const rOff = Math.random() * KOSTUR_TORNADO_OFFSET;
+  const dx = w / 2 + Math.cos(kOff) * rOff - x;
+  const dy = h / 2 + Math.sin(kOff) * rOff - y;
   const d = Math.hypot(dx, dy) || 1;
 
   pociskiGracza.push({
@@ -289,6 +379,8 @@ function aktualizujOdepchniecia(dtMs) {
 /* ---------- pętla umiejętności czasowych ---------- */
 
 function aktualizujKostura(dtMs) {
+  plamyZiemi.forEach(p => p.zycie -= dtMs);
+  plamyZiemi = plamyZiemi.filter(p => p.zycie > 0);
   if (!czyKostur()) return;
   aktualizujOdepchniecia(dtMs);
   if (!stan[1].staty) return;
@@ -298,7 +390,7 @@ function aktualizujKostura(dtMs) {
   if (pZiemia < 0) kosturZiemiaMs = KOSTUR_ZIEMIA_CZAS_BAZA_S * 1000;
   else {
     kosturZiemiaMs -= dtMs;
-    if (kosturZiemiaMs <= 0 && wystrzelGlaz()) kosturZiemiaMs = (KOSTUR_ZIEMIA_CZAS_BAZA_S - pZiemia) * 1000;
+    if (kosturZiemiaMs <= 0 && wystrzelGlaz()) kosturZiemiaMs = czasUmiejetnosciMs(KOSTUR_ZIEMIA_CZAS_BAZA_S - pZiemia);
   }
 
   // Woda: co (7 - poziom) s
@@ -306,7 +398,7 @@ function aktualizujKostura(dtMs) {
   if (pWoda < 0) kosturWodaMs = KOSTUR_WODA_CZAS_BAZA_S * 1000;
   else {
     kosturWodaMs -= dtMs;
-    if (kosturWodaMs <= 0 && wystrzelFale()) kosturWodaMs = (KOSTUR_WODA_CZAS_BAZA_S - pWoda) * 1000;
+    if (kosturWodaMs <= 0 && wystrzelFale()) kosturWodaMs = czasUmiejetnosciMs(KOSTUR_WODA_CZAS_BAZA_S - pWoda);
   }
 
   // Powietrze: co 8 s salwa (1 + 2 * poziom) tornad
@@ -315,7 +407,7 @@ function aktualizujKostura(dtMs) {
   else {
     kosturPowietrzeMs -= dtMs;
     if (kosturPowietrzeMs <= 0 && wrogowie.length > 0) {
-      kosturPowietrzeMs = KOSTUR_POWIETRZE_CZAS_MS;
+      kosturPowietrzeMs = czasUmiejetnosciMs(KOSTUR_POWIETRZE_CZAS_MS / 1000);
       const liczba = 1 + 2 * pPowietrze;
       for (let i = 0; i < liczba; i++) {
         if (i === 0) wystrzelTornada();
@@ -355,10 +447,15 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
   switch (p.typ) {
     case "kolo":
       return ruchZPodkrokami(p, KOSTUR_PREDKOSC_KOLA, dtMs, pk => {
-        const w = pierwszyWrogWZasiegu(pk, KOSTUR_PROMIEN_TRAFIENIA_KOLA);
-        if (!w) return false;
-        trafienieKolem(w, staty1, pk);
-        return true;                     // nie przebija
+        for (const w of wrogowie.slice()) {
+          if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
+          if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + KOSTUR_PROMIEN_TRAFIENIA_KOLA) continue;
+          pk.trafieni.add(w.id);
+          trafienieKolem(w, staty1, pk);
+          if (!pk.przebija) return true;                    // dodatkowy atak (Piorun): tylko pierwszy cel
+          pk.mnoznikPrzebicia += WZROST_DMG_NA_PRZEBICIE;   // główny atak: przebija jak strzała (+15% za wroga)
+        }
+        return false;
       });
 
     case "ziemia":

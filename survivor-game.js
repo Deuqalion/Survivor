@@ -171,6 +171,7 @@ function obliczStatystyki(gracz) {
   let pancerz = 5;
   let kradziezZycia = 0;
   let predkoscAtaku = 0;
+  let szybkoscZaklecia = 0;
   let predkoscRuchuBonus = 0;
   let regeneracjaPzSek = 0;
   let wskrzeszenieDostepne = false;
@@ -220,6 +221,10 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Kradzież życia" || nazwa === "Kradzież życia: 5%") kradziezZycia += val;
       else if (nazwa === "Ulepszenie broni") { obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
+      else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
+      else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +25%") szybkoscZaklecia += val;
+      else if (nazwa === "Przeładowanie") szybkoscZaklecia += val;     // Amunicja: pasywka = Szybkość zaklęcia
+      else if (nazwa === "Czarnoksięstwo") obrazeniaUmiejetnosci += val; // Księga: pasywka = Obrażenia umiejętności
       else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
       else if (nazwa === "Wskrzeszenie") wskrzeszenieDostepne = true;
@@ -261,6 +266,7 @@ function obliczStatystyki(gracz) {
     pancerz: isNaN(finalnyPancerz) ? 5 : finalnyPancerz,
     kradziezZycia: isNaN(kradziezZycia) ? 0 : kradziezZycia,
     predkoscAtaku: isNaN(predkoscAtaku) ? 0 : predkoscAtaku,
+    szybkoscZaklecia: isNaN(szybkoscZaklecia) ? 0 : szybkoscZaklecia,
     predkoscRuchuBonus: isNaN(predkoscRuchuBonus) ? 0 : predkoscRuchuBonus,
     regeneracjaPzSek: isNaN(regeneracjaPzSek) ? 0 : regeneracjaPzSek,
     wskrzeszenieDostepne: !!wskrzeszenieDostepne,
@@ -1242,8 +1248,11 @@ function aktualizujWroga(wrog, dtMs, teraz) {
 
   if (dystans > zasieg) {
     const tempo = teraz < (wrog.spowolnionyDoCzasu || 0) ? 1 - (wrog.silaSpowolnienia || 0) : 1;
-    wrog.x += (dx / dystans) * wrog.predkosc * tempo * (dtMs / 1000);
-    wrog.y += (dy / dystans) * wrog.predkosc * tempo * (dtMs / 1000);
+    // kierunek: prosto na gracza albo (gdy ktoś blokuje drogę) wg ścieżki A* z survivor-sciezki.js
+    let kierunek = { x: dx / dystans, y: dy / dystans };
+    if (typeof kierunekZOmijaniem === "function") kierunek = kierunekZOmijaniem(wrog, kierunek.x, kierunek.y, dystans, zasieg, teraz);
+    wrog.x += kierunek.x * wrog.predkosc * tempo * (dtMs / 1000);
+    wrog.y += kierunek.y * wrog.predkosc * tempo * (dtMs / 1000);
     return;
   }
 
@@ -1959,6 +1968,14 @@ function zabijWroga(wrog) {
   aktualizujInfo();
 }
 
+/* Czas oczekiwania na umiejętność liczoną w sekundach, skrócony o Szybkość zaklęcia
+   (limit: maks. -80%, żeby suma bonusów nie zbiła czasu do zera). */
+function czasUmiejetnosciMs(sekundy) {
+  const staty1 = stan[1].staty;
+  const szybkosc = staty1 ? (staty1.szybkoscZaklecia || 0) : 0;
+  return sekundy * 1000 * Math.max(0.2, 1 - szybkosc / 100);
+}
+
 function pobierzCzasAtakuGracza() {
   const staty1 = stan[1].staty;
   const predkoscAtaku = staty1 ? (staty1.predkoscAtaku || 0) : 0;
@@ -2250,6 +2267,7 @@ function rysujGre() {
 
   // Tło areny (arena.jpg) jest ustawione w CSS na .survivor-canvas-wrap — canvas tylko czyścimy.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (typeof rysujPlamyZiemi === "function") rysujPlamyZiemi();   // ślady po Ziemi Kostura (pod wszystkim)
 
   ctx.beginPath();
   ctx.arc(postac.x, postac.y, 20, 0, Math.PI * 2);
@@ -2777,11 +2795,12 @@ const WIKI_SKROTY_AFFIXOW = { "Podstawowe obrażenia": "Podst. obrażenia", "Obr
 function wikiAffixHtml(affix, stale) { return `<div class="wiki-affix${stale ? " wiki-affix-stale" : ""}" data-affix="${wikiEsc(affix.nazwa)}"><span class="wiki-affix-nazwa">${wikiEsc(WIKI_SKROTY_AFFIXOW[affix.nazwa] || affix.nazwa)}</span><span class="wiki-affix-zakres"> ${wikiEsc(formatZakresAffixu(affix))}</span></div>`; }
 function wikiTekstUlepszenia(item) { const nazwa = (typeof MAPA_ULEPSZEN_ITEMOW !== "undefined") ? MAPA_ULEPSZEN_ITEMOW[item.nazwa] : null; if (!nazwa) return ""; const def = znajdzAffix(nazwa); return (def && def.tekstTooltip) || nazwa; }
 function zbudujWikiItem(item) {
+  const idItemuWiki = Number(Object.keys(itemy).find(k => itemy[k] === item));
   // Affixy stałe (na górze, lekko pogrubione), potem pozostałe możliwe — bez duplikatów.
   const nazwyStale = Array.isArray(item.staleAffixy) ? item.staleAffixy : (item.stalyAffix ? [item.stalyAffix] : []);
-  const stale = nazwyStale.map(nazwa => znajdzAffix(nazwa)).filter(Boolean);
+  const stale = nazwyStale.map(nazwa => definicjaDlaItemu(idItemuWiki, nazwa)).filter(Boolean);
   const nazwyStaleSet = new Set(stale.map(a => a.nazwa));
-  const mozliwe = (item.mozliweAffixy || []).map(nazwa => znajdzAffix(nazwa)).filter(Boolean).filter(a => !nazwyStaleSet.has(a.nazwa));
+  const mozliwe = (item.mozliweAffixy || []).map(nazwa => definicjaDlaItemu(idItemuWiki, nazwa)).filter(Boolean).filter(a => !nazwyStaleSet.has(a.nazwa));
   const wszystkie = stale.map(a => wikiAffixHtml(a, true)).concat(mozliwe.map(a => wikiAffixHtml(a, false)));
   const affixyHtml = wszystkie.length ? wszystkie.join("") : `<div class="wiki-brak">Brak możliwych affixów</div>`;
   const tekstUlepszenia = wikiTekstUlepszenia(item);

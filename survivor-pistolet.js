@@ -17,7 +17,7 @@ const PISTOLET_PREDKOSC_POCISKU = 1100;
 const PISTOLET_PROMIEN_TRAFIENIA = 10;
 
 /* Snajperka */
-const SNAJPERKA_CO_ILE_ATAKOW = 10;
+const SNAJPERKA_CO_ILE_SEKUND = 12;
 const SNAJPERKA_CZAS_CELOWANIA_MS = 1000;
 const SNAJPERKA_PREDKOSC = 1600;
 
@@ -40,6 +40,7 @@ const KOLOR_WYBUCHU_GRANATU = "255, 170, 40";
 const GRANAT_PODPALENIE_BAZA = 0.05;     // jak Ogień Kostura: 5% + 1% za poziom maks. PŻ w 3s
 
 /* Miny */
+const MINY_CZAS_BAZA_S = 8;                // co (8 - poziom) sekund
 const MINA_PROMIEN = 10;                 // szerokość zwykłego moba (promień 10)
 const MINA_MARGINES = 68;                // nie bliżej ściany niż szerokość BOSSa (2 * 34)
 const KOLOR_WYBUCHU_MINY = "90, 220, 90";
@@ -47,10 +48,10 @@ const MINY_KRYT_MNOZNIK = 1.5;           // max poziom: szansa = Szansa na kryta
 
 const PISTOLET_TYPY_POCISKOW = ["pistolet", "snajperka", "celownik", "srut", "minigun", "granat", "mina"];
 
-let pistoletLicznikSnajperki = 0;
+let pistoletSnajperkaMs = 0;
+let pistoletMinyMs = 0;
 let pistoletLicznikShotguna = 0;
 let pistoletLicznikGranatu = 0;
-let pistoletLicznikMin = 0;
 let pistoletMinigunMs = 0;
 /* Pociski tworzone W TRAKCIE aktualizacji pocisków (strzał Snajperki po celowaniu, odbicie)
    nie mogą trafiać od razu do pociskiGracza — aktualizujPociskiGracza podmienia tę tablicę
@@ -66,10 +67,10 @@ function jestPociskPistoletu(p) {
 }
 
 function resetujPistoletu() {
-  pistoletLicznikSnajperki = 0;
+  pistoletSnajperkaMs = SNAJPERKA_CO_ILE_SEKUND * 1000;
+  pistoletMinyMs = MINY_CZAS_BAZA_S * 1000;
   pistoletLicznikShotguna = 0;
   pistoletLicznikGranatu = 0;
-  pistoletLicznikMin = 0;
   pistoletMinigunMs = 0;
   pistoletKolejkaPociskow = [];
 }
@@ -109,7 +110,7 @@ function atakPistoletu(cel, staty1) {
   const k = kierunekDo(postac.x, postac.y, cel);
 
   // zwykły atak
-  pociskiGracza.push({ typ: "pistolet", x: postac.x, y: postac.y, dx: k.dx, dy: k.dy });
+  pociskiGracza.push({ typ: "pistolet", x: postac.x, y: postac.y, dx: k.dx, dy: k.dy, trafieni: new Set(), mnoznikPrzebicia: 1 });   // przebija jak strzała
 
   // Shotgun: co drugi atak salwa ±5°, ±10°, ... (2 + 2p śrutów)
   const pShotgun = poziomUmiejetnosci("potrojna");
@@ -125,31 +126,11 @@ function atakPistoletu(cel, staty1) {
     }
   }
 
-  // Snajperka: co 10 ataków czerwony celownik na wroga z największym maks. PŻ
-  const pSnajperka = poziomUmiejetnosci("elektryczna");
-  if (pSnajperka >= 0 && ++pistoletLicznikSnajperki >= SNAJPERKA_CO_ILE_ATAKOW) {
-    const cieli = wrogONajwiekszymMaxHp();
-    if (cieli) {
-      pistoletLicznikSnajperki = 0;
-      pociskiGracza.push({ typ: "celownik", cel: cieli, zycie: SNAJPERKA_CZAS_CELOWANIA_MS, x: postac.x, y: postac.y });
-    }
-  }
-
   // Granaty: co (7 - p) atak
   const pGranaty = poziomUmiejetnosci("magiczna");
   if (pGranaty >= 0 && ++pistoletLicznikGranatu >= 7 - pGranaty) {
     pistoletLicznikGranatu = 0;
     pociskiGracza.push({ typ: "granat", x: postac.x, y: postac.y, dx: k.dx, dy: k.dy });
-  }
-
-  // Miny: co (6 - p) atak, maks. (3 + p) naraz
-  const pMiny = poziomUmiejetnosci("ognista");
-  if (pMiny >= 0 && ++pistoletLicznikMin >= 6 - pMiny) {
-    const ileMin = pociskiGracza.filter(p => p.typ === "mina").length;
-    if (ileMin < 3 + pMiny) {
-      pistoletLicznikMin = 0;
-      rozstawMine();
-    }
   }
 }
 
@@ -159,9 +140,39 @@ function aktualizujPistoletu(dtMs) {
     pociskiGracza.push(...pistoletKolejkaPociskow);
     pistoletKolejkaPociskow = [];
   }
-  if (!czyPistolet()) return;
+  if (!czyPistolet() || !stan[1].staty) return;
+
+  // Snajperka: co 12 s (skracane Szybkością zaklęcia) — celownik na wroga z największym maks. PŻ
+  const pSnajperka = poziomUmiejetnosci("elektryczna");
+  if (pSnajperka < 0) pistoletSnajperkaMs = czasUmiejetnosciMs(SNAJPERKA_CO_ILE_SEKUND);
+  else {
+    pistoletSnajperkaMs -= dtMs;
+    if (pistoletSnajperkaMs <= 0) {
+      const cel = wrogONajwiekszymMaxHp();
+      if (cel) {                                           // bez wrogów czeka na pierwszego
+        pociskiGracza.push({ typ: "celownik", cel, zycie: SNAJPERKA_CZAS_CELOWANIA_MS, x: postac.x, y: postac.y });
+        pistoletSnajperkaMs = czasUmiejetnosciMs(SNAJPERKA_CO_ILE_SEKUND);
+      }
+    }
+  }
+
+  // Miny: co (8 - p) s, maks. (3 + p) naraz
+  const pMiny = poziomUmiejetnosci("ognista");
+  if (pMiny < 0) pistoletMinyMs = czasUmiejetnosciMs(MINY_CZAS_BAZA_S);
+  else {
+    pistoletMinyMs -= dtMs;
+    if (pistoletMinyMs <= 0) {
+      const ileMin = pociskiGracza.filter(p => p.typ === "mina").length;
+      if (ileMin < 3 + pMiny) {                            // przy limicie czeka, aż któraś mina wybuchnie
+        rozstawMine();
+        pistoletMinyMs = czasUmiejetnosciMs(MINY_CZAS_BAZA_S - pMiny);
+      }
+    }
+  }
+
+  // Minigun
   const pMini = poziomUmiejetnosci("odlamkowa");
-  if (pMini < 0 || !stan[1].staty) return;
+  if (pMini < 0) return;
 
   pistoletMinigunMs -= dtMs;
   if (pistoletMinigunMs > 0) return;
@@ -195,10 +206,11 @@ function rozstawMine() {
 }
 
 function wybuchMiny(mina, staty1) {
+  const mnoznik = 1 + Math.max(0, poziomUmiejetnosci("ognista"));   // x1/x2/x3/x4/x5 wg poziomu
   dodajEfektWybuchu(mina.x, mina.y, PROMIEN_OGNIA, KOLOR_WYBUCHU_MINY);
   wrogowie.slice().forEach(w => {
     if (w.hp <= 0 || Math.hypot(mina.x - w.x, mina.y - w.y) > PROMIEN_OGNIA) return;
-    wykonajAtakMagiczny(w, staty1, mina.x, mina.y, 1, { bezLinii: true, zrodlo: "ognista" });
+    wykonajAtakMagiczny(w, staty1, mina.x, mina.y, mnoznik, { bezLinii: true, zrodlo: "ognista" });
   });
 }
 
@@ -237,11 +249,15 @@ function aktualizujPociskPistoletu(p, dtMs, staty1) {
   switch (p.typ) {
     case "pistolet":
       return ruchZPodkrokami(p, PISTOLET_PREDKOSC_POCISKU, dtMs, pk => {
-        const w = pierwszyWrogWZasiegu(pk, PISTOLET_PROMIEN_TRAFIENIA);
-        if (!w) return false;
-        const dmg = wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, 1);
-        procAffixuOgnistejStrzaly(w, dmg, staty1);
-        return true;
+        for (const w of wrogowie.slice()) {
+          if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
+          if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + PISTOLET_PROMIEN_TRAFIENIA) continue;
+          pk.trafieni.add(w.id);
+          const dmg = wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, pk.mnoznikPrzebicia);
+          procAffixuOgnistejStrzaly(w, dmg, staty1);
+          pk.mnoznikPrzebicia += WZROST_DMG_NA_PRZEBICIE;   // przebija: +15% obrażeń za każdego wroga
+        }
+        return false;
       });
 
     case "srut": {

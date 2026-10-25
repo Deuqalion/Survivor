@@ -23,27 +23,27 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "elektryczna", nazwa: "Piorun", plik: "KOSTURY/piorun.png", kol: 0, wiersz: 0,
     bonus: "Pioruny są obszarowe.",
-    opis: p => `Atakujesz <span class="umiej-lvl">${2 + p}</span> wrogów na raz. Ataki mają 33% szansy na porażenie go i najbliższego wroga zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
+    opis: p => `Atakujesz <span class="umiej-lvl">${2 + p}</span> wrogów na raz i masz szansę na porażenie go i najbliższego wroga za <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Ogień", plik: "KOSTURY/ogien.png", kol: 1, wiersz: 0,
-    bonus: () => `Zwykłe ataki mają 40% szansy na wybuch (${dmgMagiczne(1, 700)}).`,
-    opis: p => `Twoje umiejętności mają 33% szansy na podpalenie wrogów zadając <span class="umiej-lvl">${5 + p}%</span> ich maksymalnego zdrowia w ciągu 3 sekund.`
+    bonus: () => `Ataki mogą wybuchać zadając ${dmgMagiczne(1, 700)}.`,
+    opis: p => `Umiejętności mają 33% szansy na podpalenie zadając <span class="umiej-lvl">${5 + p}%</span> ich maksymalnego zdrowia w ciągu 3s.`
   },
   {
     id: "odlamkowa", nazwa: "Ziemia", plik: "KOSTURY/ziemia.png", kol: 0, wiersz: 1,
-    bonus: "Wybuch ma 33% szansy na omdlenie (1s).",
-    opis: p => `Co <span class="umiej-lvl">${9 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych wszystkim wrogom w obszarze wybuchu.`
+    bonus: "Szansa na omdlenie.",
+    opis: p => `Co <span class="umiej-lvl">${9 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych wszystkim wrogom w obszarze.`
   },
   {
     id: "magiczna", nazwa: "Powietrze", plik: "KOSTURY/powietrze.png", kol: 1, wiersz: 1,
     bonus: "Spowalnia wrogów o 20%.",
-    opis: p => `Co 8 sekund przywołujesz tornada w ilości <span class="umiej-lvl">${1 + 2 * p}</span> zadając <span class="umiej-dmg">${dmgMagiczne(1 / 2)}</span> obrażeń magicznych wszystkim wrogom na drodze.`
+    opis: p => `Co 8 sekund przywołujesz tornada w ilości <span class="umiej-lvl">${1 + 2 * p}</span> zadające <span class="umiej-dmg">${dmgMagiczne(1 / 2)}</span> obrażeń magicznych.`
   },
   {
     id: "potrojna", nazwa: "Woda", plik: "KOSTURY/woda.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na odepchnięcie wroga.",
-    opis: p => `Co <span class="umiej-lvl">${7 - p}</span> sekund przywołujesz falę wody zadając <span class="umiej-dmg">${dmgMagiczne(1 / 2)}</span> obrażeń magicznych wszystkim wrogom na drodze.`
+    opis: p => `Co <span class="umiej-lvl">${7 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne(1 / 2)}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "KOSTURY/wampir.png", kol: 1, wiersz: 2,
@@ -56,7 +56,7 @@ const UMIEJETNOSCI_PISTOLET = [
   {
     id: "elektryczna", nazwa: "Snajperka", plik: "PISTOLETY/sniperka.png", kol: 0, wiersz: 0,
     bonus: "Pocisk odbija się w drugi cel.",
-    opis: p => `Co 10 ataków namierzasz cel o największym maksymalnym zdrowiu i po 1 sekundzie wystrzeliwujesz w niego pocisk zadając <span class="umiej-dmg">${dmgMagiczne(2 + p)}</span> obrażeń magicznych.`
+    opis: p => `Co 12 sekund namierzasz i strzelasz w największego wroga zadając <span class="umiej-dmg">${dmgMagiczne(2 + p)}</span> obrażeń magicznych.`
   },
   {
     id: "potrojna", nazwa: "Shotgun", plik: "PISTOLETY/shotgun.png", kol: 1, wiersz: 0,
@@ -75,8 +75,8 @@ const UMIEJETNOSCI_PISTOLET = [
   },
   {
     id: "ognista", nazwa: "Miny", plik: "PISTOLETY/miny.png", kol: 0, wiersz: 2,
-    bonus: "Umiejętności mogą krytować za +50%.",
-    opis: p => `Co <span class="umiej-lvl">${6 - p}</span> atak rozstawiasz miny (max. <span class="umiej-lvl">${3 + p}</span>) wybuchające pod wrogami i zadające <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych pobliskim wrogom.`
+    bonus: "Umiejętności mogą krytować.",
+    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund rozstawiasz miny (max. <span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych w obszarze.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryczny pistolet", plik: "PISTOLETY/wampgun.png", kol: 1, wiersz: 2,
@@ -103,7 +103,7 @@ const UMIEJETNOSCI_SHURIKEN = [
   },
   {
     id: "magiczna", nazwa: "Bumerang", plik: "SHURIKENY/bumerang.png", kol: 1, wiersz: 1,
-    bonus: "Hitbox bumerangów 2,5x większy.",
+    bonus: "Większe bumerangi.",
     opis: p => `Wokół Ciebie orbitują bumerangi w ilości <span class="umiej-lvl">${2 + p}</span> zadając <span class="umiej-dmg">${dmgMagiczne(1 / 2)}</span> obrażeń magicznych.`
   },
   {
@@ -124,22 +124,34 @@ const BRONIE = {
   luk: {
     nazwa: "Łuk", nazwaAmunicji: "Strzała", ikona: "🏹",
     bron: "bron.png", amunicja: "strzala.png",
-    umiejetnosci: UMIEJETNOSCI_LUK
+    umiejetnosci: UMIEJETNOSCI_LUK,
+    affixyAmunicji: ["Wartość ataku", "Prędkość ataku", "Zwykła strzała"],
+    zakresyAmunicji: {},
+    ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   kostur: {
     nazwa: "Kostur", nazwaAmunicji: "Księga", ikona: "🔮",
     bron: "kostur.png", amunicja: "ksiega.png",
-    umiejetnosci: UMIEJETNOSCI_KOSTUR
+    umiejetnosci: UMIEJETNOSCI_KOSTUR,
+    affixyAmunicji: ["Obrażenia umiejętności", "Szybkość zaklęcia", "Czarnoksięstwo"],
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 5 } },
+    ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
   },
   pistolet: {
     nazwa: "Pistolet", nazwaAmunicji: "Amunicja", ikona: "🔫",
     bron: "pistolet.png", amunicja: "amunicja.png",
-    umiejetnosci: UMIEJETNOSCI_PISTOLET
+    umiejetnosci: UMIEJETNOSCI_PISTOLET,
+    affixyAmunicji: ["Szybkość zaklęcia", "Prędkość ataku", "Przeładowanie"],
+    zakresyAmunicji: {},
+    ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   shuriken: {
     nazwa: "Shuriken", nazwaAmunicji: "Suriken", ikona: "✴️",
     bron: "shuriken.png", amunicja: "shuriken2.png",
-    umiejetnosci: UMIEJETNOSCI_SHURIKEN
+    umiejetnosci: UMIEJETNOSCI_SHURIKEN,
+    affixyAmunicji: ["Wartość ataku", "Prędkość ataku", "Zręczność"],
+    zakresyAmunicji: { "Wartość ataku": { min: 60, max: 300 } },
+    ulepszenieAmunicji: "Prędkość ataku: +35%"
   }
 };
 
@@ -159,6 +171,20 @@ function zastosujBron(id) {
 
   itemy[ITEM_BRON].obraz = b.bron;
   itemy[ITEM_STRZALA].obraz = b.amunicja;
+
+  // Affixy przedmiotu amunicji (slot 12) zależą od broni: stałe = możliwe, zakresy i ulepszenie
+  const amunicja = itemy[ITEM_STRZALA];
+  amunicja.staleAffixy = b.affixyAmunicji.slice();
+  amunicja.mozliweAffixy = b.affixyAmunicji.slice();
+  amunicja.zakresy = b.zakresyAmunicji;
+  MAPA_ULEPSZEN_ITEMOW.strzala = b.ulepszenieAmunicji;
+
+  // Zmiana broni: stare affixy amunicji z poprzedniej broni nie pasują do nowych — wyczyść
+  if (stan[1].wylosowane[ITEM_STRZALA]) {
+    delete stan[1].wylosowane[ITEM_STRZALA];
+    delete stan[1].pierwotne[ITEM_STRZALA];
+    obliczStatystyki(1);
+  }
 
   const naglowek = document.querySelector(".postac-naglowek");
   if (naglowek) naglowek.textContent = `🛡️ Ekwipunek ${b.ikona}`;

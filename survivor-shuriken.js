@@ -29,9 +29,9 @@ const RYKOSZET_ZASIEG = PROMIEN_OGNIA * 2 * 2.5;           // 2,5x średnica obr
 const RYKOSZET_WZROST_OBRAZEN = 0.15;                      // max poziom: +15% za każde odbicie
 
 /* Bumerang */
-const BUMERANG_PROMIEN_ORBITY = PROMIEN_OGNIA * 2 * 2;     // 2x średnica obrażeń obszarowych = 440
-const BUMERANG_PROMIEN = 10;                               // jak podstawowy mob
-const BUMERANG_MNOZNIK_HITBOXA_MAX = 2.5;
+const BUMERANG_PROMIEN_ORBITY = PROMIEN_OGNIA * 1.7;
+const BUMERANG_PROMIEN = 15;                               // wielkość (i hitbox) bumerangu
+const BUMERANG_PROMIEN_MAX = 25;                           // po max ulepszeniu: wygląd i hitbox 25
 const BUMERANG_PREDKOSC_KATOWA = 1.6;                      // rad/s
 const BUMERANG_CZAS_MIEDZY_TRAFIENIAMI_MS = 800;           // ten sam bumerang nie bije tego samego wroga częściej
 
@@ -78,6 +78,7 @@ function nowyShuriken(x, y, dx, dy, opcje) {
     kat: Math.random() * Math.PI * 2,
     trafieni: new Set(),
     odbicia: 0, nrOdbicia: 0,
+    przebija: false, mnoznikPrzebicia: 1, liczbaTrafien: 0,
     mnoznikSkilla: 1, sila: 1, ninjutsu: false
   }, opcje || {});
 }
@@ -91,7 +92,7 @@ function atakShurikena(cel, staty1) {
   const pRykoszet = poziomUmiejetnosci("elektryczna");
   const odbicia = pRykoszet >= 0 ? 1 + pRykoszet : 0;
 
-  pociskiGracza.push(nowyShuriken(postac.x, postac.y, k.dx, k.dy, { odbicia }));
+  pociskiGracza.push(nowyShuriken(postac.x, postac.y, k.dx, k.dy, { odbicia, przebija: true }));   // główny atak przebija jak strzała
 
   // Ninjutsu: (1 + p) dodatkowych zwykłych ataków, 75% skuteczności (max: 100%)
   const pNinjutsu = poziomUmiejetnosci("potrojna");
@@ -207,7 +208,7 @@ function pierwszyWrogPozaLancuchem(p, dodatek) {
   return null;
 }
 
-function trafienieShurikenem(w, staty1, pk) {
+function trafienieShurikenem(w, staty1, pk, mozeOdbic) {
   const pRykoszet = poziomUmiejetnosci("elektryczna");
   const wzrost = pRykoszet >= MAX_POZIOM_UMIEJETNOSCI ? RYKOSZET_WZROST_OBRAZEN * pk.nrOdbicia : 0;
 
@@ -215,7 +216,7 @@ function trafienieShurikenem(w, staty1, pk) {
   const x = w.x, y = w.y;
 
   // zwykły atak: kryty, przeszywki, trucizna, krwawienie, omdlenie, kradzież życia (Ninjutsu: w 75%/100% siły)
-  const dmg = wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, 1 + wzrost, {
+  const dmg = wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, pk.mnoznikPrzebicia + wzrost, {
     mnoznikSkilla: pk.mnoznikSkilla,
     silaEfektow: pk.sila,
     zrodloDmg: zrodlo
@@ -226,14 +227,14 @@ function trafienieShurikenem(w, staty1, pk) {
 
   // Rykoszet: szuka najbliższego wroga w zasięgu (2,5x średnica obrażeń obszarowych)
   pk.trafieni.add(w.id);
-  if (pk.odbicia > 0) {
+  if (mozeOdbic && pk.odbicia > 0) {
     const nastepny = znajdzNajblizszegoWrogaOd({ id: w.id, x, y }, pk.trafieni);
     if (nastepny && Math.hypot(nastepny.x - x, nastepny.y - y) <= RYKOSZET_ZASIEG) {
       const k = kierunekShurikena(x, y, nastepny);
       shurikenKolejka.push(nowyShuriken(x, y, k.dx, k.dy, {
         odbicia: pk.odbicia - 1, nrOdbicia: pk.nrOdbicia + 1,
         mnoznikSkilla: pk.mnoznikSkilla, sila: pk.sila, ninjutsu: pk.ninjutsu,
-        trafieni: pk.trafieni, kat: pk.kat
+        trafieni: new Set(pk.trafieni), kat: pk.kat
       }));
     }
   }
@@ -247,10 +248,21 @@ function aktualizujPociskShurikena(p, dtMs, staty1) {
     case "shuriken":
       p.kat += dtMs / 1000 * 20;
       return ruchZPodkrokami(p, SHURIKEN_PREDKOSC, dtMs, pk => {
-        const w = pierwszyWrogPozaLancuchem(pk, SHURIKEN_PROMIEN_TRAFIENIA);
-        if (!w) return false;
-        trafienieShurikenem(w, staty1, pk);
-        return true;                         // nie przebija
+        if (!pk.przebija) {                  // Ninjutsu i odbicia: tylko pierwszy cel
+          const w = pierwszyWrogPozaLancuchem(pk, SHURIKEN_PROMIEN_TRAFIENIA);
+          if (!w) return false;
+          trafienieShurikenem(w, staty1, pk, true);
+          return true;
+        }
+        // główny atak: przebija wrogów (+15% za każdego); Rykoszet odbija się tylko od pierwszego trafienia
+        for (const w of wrogowie.slice()) {
+          if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
+          if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + SHURIKEN_PROMIEN_TRAFIENIA) continue;
+          trafienieShurikenem(w, staty1, pk, pk.liczbaTrafien === 0);
+          pk.liczbaTrafien += 1;
+          pk.mnoznikPrzebicia += WZROST_DMG_NA_PRZEBICIE;
+        }
+        return false;
       });
 
     case "lotos": {
@@ -274,7 +286,7 @@ function aktualizujPociskShurikena(p, dtMs, staty1) {
       if (pBumerang < 0) return false;
 
       const liczba = 2 + pBumerang;
-      const hitbox = BUMERANG_PROMIEN * (pBumerang >= MAX_POZIOM_UMIEJETNOSCI ? BUMERANG_MNOZNIK_HITBOXA_MAX : 1);
+      const hitbox = pBumerang >= MAX_POZIOM_UMIEJETNOSCI ? BUMERANG_PROMIEN_MAX : BUMERANG_PROMIEN;
       const katDocelowy = shurikenKatBumerangow + p.idx * Math.PI * 2 / liczba;
       const katStart = p.katPoprzedni === null ? katDocelowy : p.katPoprzedni;
       p.katPoprzedni = katDocelowy;
@@ -369,7 +381,7 @@ function rysujPociskShurikena(p) {
     }
 
     case "bumerang": {
-      const R = BUMERANG_PROMIEN;
+      const R = poziomUmiejetnosci("magiczna") >= MAX_POZIOM_UMIEJETNOSCI ? BUMERANG_PROMIEN_MAX : BUMERANG_PROMIEN;
       ctx.save();
       // lekki blur za bumerangiem: kilka coraz bledszych kopii wstecz po orbicie
       for (let i = 3; i >= 1; i--) {
