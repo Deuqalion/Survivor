@@ -12,8 +12,9 @@
    ============================================================ */
 
 const SHURIKEN_PREDKOSC = 1000;
-const SHURIKEN_PROMIEN_TRAFIENIA = 12;
+const SHURIKEN_PROMIEN_TRAFIENIA = 14;
 const SHURIKEN_PROMIEN_RYSOWANIA = 11;
+const SHURIKEN_PROMIEN_ZWYKLEGO = 14;      // zwykły atak jest nieco większy niż Lotos
 
 /* Ninjutsu */
 const NINJUTSU_EFEKTYWNOSC = 0.75;           // max poziom: 1
@@ -273,7 +274,7 @@ function aktualizujPociskShurikena(p, dtMs, staty1) {
           if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
           if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + SHURIKEN_PROMIEN_TRAFIENIA) continue;
           pk.trafieni.add(w.id);
-          const dmg = wykonajAtakMagiczny(w, staty1, pk.x, pk.y, 1 / 2, { bezLinii: true, zrodlo: "odlamkowa" });
+          const dmg = wykonajAtakMagiczny(w, staty1, pk.x, pk.y, 1, { bezLinii: true, zrodlo: "odlamkowa" });
           procObszarowyShurikena(w, dmg, staty1);
           if (!przebija) return true;        // bije tylko pierwszy cel
         }
@@ -307,7 +308,7 @@ function aktualizujPociskShurikena(p, dtMs, staty1) {
           if (teraz - (p.cooldowny.get(w.id) ?? -1e9) < BUMERANG_CZAS_MIEDZY_TRAFIENIAMI_MS) continue;
 
           p.cooldowny.set(w.id, teraz);
-          const dmg = wykonajAtakMagiczny(w, staty1, p.x, p.y, 1 / 2, { bezLinii: true, zrodlo: "magiczna" });
+          const dmg = wykonajAtakMagiczny(w, staty1, p.x, p.y, 1, { bezLinii: true, zrodlo: "magiczna" });
           procObszarowyShurikena(w, dmg, staty1);
         }
       }
@@ -341,16 +342,30 @@ function sciezkaGwiazdki(x, y, r, kat, ramiona = 4, wciecie = 0.4) {
 function rysujPociskShurikena(p) {
   switch (p.typ) {
     case "shuriken": {
-      sciezkaGwiazdki(p.x, p.y, SHURIKEN_PROMIEN_RYSOWANIA, p.kat);
+      ctx.save();
+      // lekki blur za gwiazdką
+      ctx.lineCap = "round";
+      ctx.shadowColor = "#cfd8ea";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.dx * 26, p.y - p.dy * 26);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = "rgba(215, 225, 245, 0.28)";
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      sciezkaGwiazdki(p.x, p.y, SHURIKEN_PROMIEN_ZWYKLEGO, p.kat);
       ctx.fillStyle = "#dfe4ee";
       ctx.fill();
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = "#4a5160";
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
       ctx.fillStyle = "#4a5160";
       ctx.fill();
+      ctx.restore();
       return true;
     }
 

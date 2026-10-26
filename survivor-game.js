@@ -223,7 +223,7 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
       else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +25%") szybkoscZaklecia += val;
-      else if (nazwa === "Przeładowanie") szybkoscZaklecia += val;     // Amunicja: pasywka = Szybkość zaklęcia
+      else if (nazwa === "Destrukcja") { wzmocnienieKrytyczne += val; wzmocnienieTrucizny += val; }   // Amunicja: pasywka = +x pp do obu wzmocnień
       else if (nazwa === "Czarnoksięstwo") obrazeniaUmiejetnosci += val; // Księga: pasywka = Obrażenia umiejętności
       else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
@@ -537,6 +537,7 @@ function dmgBossa() {
 }
 
 function maksAffixowItemu(itemId) {
+  if (itemy[itemId].maxAffixow) return itemy[itemId].maxAffixow;
   const nazwa = itemy[itemId].nazwa;
   if (nazwa === "strzala") return 3;
   if (nazwa === "strzaly") return 4;
@@ -1500,8 +1501,8 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
         cel.zatruteAtaki = TRUCIZNA_LICZBA_ATAKOW;
         cel.silaTrucizny = MNOZNIK_EFEKTOW_POBOCZNYCH;
       }
-      if (losujProcent() < (staty1.krwawienie || 0)) {
-        if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
+      if (losujProcent() < (staty1.krwawienie || 0) && mozeDostacKrwawienie(cel)) {
+        cel.ostatniTikKrwawienia = czasWirt();
         cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
         cel.silaKrwawienia = MNOZNIK_EFEKTOW_POBOCZNYCH;
       }
@@ -1516,10 +1517,9 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     cel.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
     rundaStaty.omdlenia += 1;
   }
-  if (losujProcent() < (staty1.krwawienie || 0)) {
-    // Pierwszy tik dopiero po 0,5s (tylko gdy nie krwawił już wcześniej —
-    // ponowny proc odświeża czas trwania, ale nie resetuje rytmu tików).
-    if (cel.krwawienieTury <= 0) cel.ostatniTikKrwawienia = czasWirt();
+  if (losujProcent() < (staty1.krwawienie || 0) && mozeDostacKrwawienie(cel)) {
+    // Pierwszy tik dopiero po 0,5s od nałożenia.
+    cel.ostatniTikKrwawienia = czasWirt();
     cel.krwawienieTury = KRWAWIENIE_LICZBA_TIKOW;
     cel.silaKrwawienia = opcje.silaEfektow ?? 1;
   }
@@ -2003,6 +2003,14 @@ function szansaOdpornegoMoba() {
 }
 const MNOZNIK_DMG_ODPORNEGO = 0.25;
 
+/* Wróg, który krwawił, nie może dostać kolejnego krwawienia przez 3 s po zakończeniu poprzedniego
+   (ani nowego procka w trakcie trwania — krwawienie nie jest już odświeżane). */
+const KRWAWIENIE_ODPORNOSC_PO_ZAKONCZENIU_MS = 3000;
+
+function mozeDostacKrwawienie(wrog) {
+  return !(wrog.krwawienieTury > 0) && czasWirt() >= (wrog.krwawienieOdpornyDo || 0);
+}
+
 function aktualizujKrwawienieWrogow(teraz) {
   const staty1 = stan[1].staty;
   const wzmocnienieKrwawienia = staty1 ? (staty1.obrazeniaKrwawienia || 0) : 0;
@@ -2014,6 +2022,7 @@ function aktualizujKrwawienieWrogow(teraz) {
 
     wrog.ostatniTikKrwawienia = teraz;
     wrog.krwawienieTury -= 1;
+    if (wrog.krwawienieTury <= 0) wrog.krwawienieOdpornyDo = teraz + KRWAWIENIE_ODPORNOSC_PO_ZAKONCZENIU_MS;
 
     const mnoznikOdpornosci = wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1;
     // Wzmocnienie krwawienia dodaje punkty procentowe NA SEKUNDĘ (np. 5% = +5 pp/s),

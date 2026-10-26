@@ -14,7 +14,7 @@
 
 /* Zwykły atak */
 const PISTOLET_PREDKOSC_POCISKU = 1100;
-const PISTOLET_PROMIEN_TRAFIENIA = 10;
+const PISTOLET_PROMIEN_TRAFIENIA = 12;
 
 /* Snajperka */
 const SNAJPERKA_CO_ILE_SEKUND = 12;
@@ -31,7 +31,7 @@ const MINIGUN_POCISKI_NA_ATAK = [3, 6, 9, 13, 16];   // pocisków miniguna w cza
 const MINIGUN_ROZRZUT_STOPNIE = 0.5;
 const MINIGUN_PREDKOSC = 1000;
 const MINIGUN_SZANSA_RYKOSZETU = 25;
-const MINIGUN_MNOZNIK = 1 / 6;                 // obrażenia magiczne jednego pocisku (jak w opisie umiejętności)
+const MINIGUN_MNOZNIK = 1 / 7;                 // obrażenia magiczne jednego pocisku (jak w opisie umiejętności)
 
 /* Granaty */
 const GRANAT_PREDKOSC = PISTOLET_PREDKOSC_POCISKU;   // tak szybko jak zwykły atak
@@ -261,13 +261,15 @@ function aktualizujPociskPistoletu(p, dtMs, staty1) {
       });
 
     case "srut": {
-      const przebija = poziomUmiejetnosci("potrojna") >= MAX_POZIOM_UMIEJETNOSCI;
+      const pShotgun = poziomUmiejetnosci("potrojna");
+      const przebija = pShotgun >= MAX_POZIOM_UMIEJETNOSCI;
+      const mnoznikSrutu = (1 + pShotgun) / 2;      // x1/2, x1, x1 1/2, x2, x2 1/2
       return ruchZPodkrokami(p, SHOTGUN_PREDKOSC, dtMs, pk => {
         for (const w of wrogowie.slice()) {
           if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
           if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + PISTOLET_PROMIEN_TRAFIENIA) continue;
           pk.trafieni.add(w.id);
-          wykonajAtakMagiczny(w, staty1, pk.x, pk.y, 1 / 2, { bezLinii: true, zrodlo: "potrojna" });
+          wykonajAtakMagiczny(w, staty1, pk.x, pk.y, mnoznikSrutu, { bezLinii: true, zrodlo: "potrojna" });
           if (!przebija) return true;       // pierwszy napotkany cel
         }
         return false;
@@ -333,7 +335,7 @@ function aktualizujPociskPistoletu(p, dtMs, staty1) {
         if (d <= promienWroga(p.cel) + 8) {
           const cel = p.cel;
           const xT = cel.x, yT = cel.y;
-          wykonajAtakMagiczny(cel, staty1, p.x, p.y, 2 + pSnajperka, { bezLinii: true, zrodlo: "elektryczna" });
+          wykonajAtakMagiczny(cel, staty1, p.x, p.y, 3 + pSnajperka, { bezLinii: true, zrodlo: "elektryczna" });
 
           // max poziom: odbicie w drugi cel o największym maks. PŻ
           if (pSnajperka >= MAX_POZIOM_UMIEJETNOSCI && !p.odbity) {
@@ -381,12 +383,20 @@ function rysujPociskPistoletu(p) {
     case "pistolet": {
       ctx.save();
       ctx.lineCap = "round";
-      ctx.shadowColor = "#fff0b0";
-      ctx.shadowBlur = 6;
+      ctx.shadowColor = "#ffe9a8";
+      ctx.shadowBlur = 12;
+      // rozmyta smuga za pociskiem
       ctx.beginPath();
-      ctx.moveTo(p.x - p.dx * 12, p.y - p.dy * 12);
+      ctx.moveTo(p.x - p.dx * 28, p.y - p.dy * 28);
       ctx.lineTo(p.x, p.y);
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "rgba(255, 235, 170, 0.3)";
+      ctx.stroke();
+      // sam pocisk
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.dx * 15, p.y - p.dy * 15);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 4.5;
       ctx.strokeStyle = "#fff3cf";
       ctx.stroke();
       ctx.restore();
@@ -395,11 +405,20 @@ function rysujPociskPistoletu(p) {
 
     case "srut": {
       ctx.save();
+      ctx.lineCap = "round";
       ctx.shadowColor = "#ff8a1f";
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 16;
+      // blur za śrutem
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffa83d";
+      ctx.moveTo(p.x - p.dx * 20, p.y - p.dy * 20);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(255, 150, 40, 0.35)";
+      ctx.stroke();
+      // pocisk z lekką poświatą
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.8, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffb04d";
       ctx.fill();
       ctx.restore();
       return true;
@@ -434,22 +453,32 @@ function rysujPociskPistoletu(p) {
     }
 
     case "snajperka": {
+      // wąski ogon, szeroki przód pocisku (zaokrąglony nos)
+      const kat = Math.atan2(p.dy, p.dx);
+      const px = -p.dy, py = p.dx;
+      const dlugosc = 42, szerPrzod = 6.5, szerOgon = 0.8;
+      const tx = p.x - p.dx * dlugosc, ty = p.y - p.dy * dlugosc;
       ctx.save();
-      ctx.lineCap = "round";
       ctx.shadowColor = "#ff2a2a";
       ctx.shadowBlur = 16;
+      const g = ctx.createLinearGradient(tx, ty, p.x, p.y);
+      g.addColorStop(0, "rgba(255, 60, 60, 0.05)");
+      g.addColorStop(1, "rgba(255, 55, 55, 0.95)");
       ctx.beginPath();
-      ctx.moveTo(p.x - p.dx * 38, p.y - p.dy * 38);
-      ctx.lineTo(p.x, p.y);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = "rgba(255, 60, 60, 0.9)";
-      ctx.stroke();
+      ctx.moveTo(tx + px * szerOgon, ty + py * szerOgon);
+      ctx.lineTo(p.x + px * szerPrzod, p.y + py * szerPrzod);
+      ctx.arc(p.x, p.y, szerPrzod, kat + Math.PI / 2, kat - Math.PI / 2, true);
+      ctx.lineTo(tx - px * szerOgon, ty - py * szerOgon);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
       ctx.shadowBlur = 0;
       ctx.beginPath();
-      ctx.moveTo(p.x - p.dx * 20, p.y - p.dy * 20);
-      ctx.lineTo(p.x, p.y);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#ffd0d0";
+      ctx.moveTo(p.x - p.dx * 18, p.y - p.dy * 18);
+      ctx.lineTo(p.x + p.dx * 4, p.y + p.dy * 4);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#ffd6d6";
       ctx.stroke();
       ctx.restore();
       return true;

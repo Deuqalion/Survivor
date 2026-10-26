@@ -26,6 +26,7 @@ function definicjaDlaItemu(itemId, nazwa) {
 }
 
 function maksymalnaLiczbaAffixow(item) {
+  if (item.maxAffixow) return item.maxAffixow;   // np. Amunicja pistoletu ma 4 affixy
   if (item.nazwa === "strzala") return 3;
   if (item.nazwa === "strzaly") return 4;
   return 5;

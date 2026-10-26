@@ -18,7 +18,8 @@ const KOSTUR_PROMIEN_TRAFIENIA_KOLA = 12;
 
 /* Piorun */
 const KOSTUR_SZANSA_PIORUNA = 33;
-const KOSTUR_MNOZNIK_PIORUNA = 1;
+const KOSTUR_ZASIEG_PIORUNA = PROMIEN_OGNIA * 2 * 2.5;   // szukanie drugiego celu jak w Rykoszecie (550)
+function mnoznikPioruna() { return 0.8 + 0.05 * Math.max(0, poziomUmiejetnosci("elektryczna")); }   // x0,8 / 0,85 / 0,9 / 0,95 / 1
 const KOLOR_WYBUCHU_PIORUNA = "255, 225, 40";          // żółty
 const KOLOR_PIORUNA = "255, 235, 80";
 
@@ -29,13 +30,12 @@ const KOSTUR_SZANSA_WYBUCHU_ZWYKLEGO = 40;              // max poziom: zwykły a
 const KOSTUR_PODSTAWA_WYBUCHU_ZWYKLEGO = 700;           // (700 + zabici) * Obr. um.
 
 /* Ziemia */
-const KOSTUR_ZIEMIA_CZAS_BAZA_S = 9;                    // co (9 - poziom) s
+const KOSTUR_ZIEMIA_CZAS_BAZA_S = 10;                   // co (10 - poziom) s
 const KOSTUR_PREDKOSC_GLAZU = 650;
 const PROMIEN_WYBUCHU_ZIEMI = PROMIEN_OGNIA * 2;        // 2x zasięg obrażeń obszarowych
 const KOLOR_WYBUCHU_ZIEMI = "90, 200, 70";              // zielony
 const KOSTUR_SZANSA_OMDLENIA_ZIEMI = 33;
 const KOSTUR_CZAS_PLAMY_ZIEMI_MS = 2000;
-const KOSTUR_CZAS_OMDLENIA_ZIEMI_MS = 1000;
 
 /* Powietrze */
 const KOSTUR_POWIETRZE_CZAS_MS = 8000;
@@ -134,7 +134,8 @@ function procPioruna(cel, staty1) {
   if (poziomUmiejetnosci("elektryczna") < 0) return;
   if (losujProcent() >= KOSTUR_SZANSA_PIORUNA) return;
 
-  const sasiad = znajdzNajblizszegoWrogaOd(cel, new Set());   // 1 najbliższy wróg od celu
+  let sasiad = znajdzNajblizszegoWrogaOd(cel, new Set());   // 1 najbliższy wróg od celu, ale tylko w zasięgu
+  if (sasiad && Math.hypot(sasiad.x - cel.x, sasiad.y - cel.y) > KOSTUR_ZASIEG_PIORUNA) sasiad = null;
   const trafione = new Set();
   uderzPiorunem(cel, staty1, trafione);
   if (sasiad && sasiad.hp > 0) uderzPiorunem(sasiad, staty1, trafione);
@@ -149,7 +150,7 @@ function uderzPiorunem(cel, staty1, trafione) {
   const uderz = w => {
     if (w.hp <= 0 || trafione.has(w.id)) return;
     trafione.add(w.id);
-    atakUmiejetnosciKostura(w, staty1, w.x, w.y, KOSTUR_MNOZNIK_PIORUNA, "elektryczna");
+    atakUmiejetnosciKostura(w, staty1, w.x, w.y, mnoznikPioruna(), "elektryczna");
   };
 
   uderz(cel);
@@ -243,13 +244,16 @@ function wybuchZiemi(x, y, staty1) {
   dodajEfektWybuchu(x, y, PROMIEN_WYBUCHU_ZIEMI, KOLOR_WYBUCHU_ZIEMI);
   dodajPlameZiemi(x, y);
 
+  // max poziom: JEDNO losowanie 33% na cały wybuch — jeśli się uda, omdlewają wszyscy trafieni
+  // (czas jak zwykłe omdlenie; Arcybossy są odporne)
+  const omdlenie = maks && losujProcent() < KOSTUR_SZANSA_OMDLENIA_ZIEMI;
+
   wrogowie.slice().forEach(w => {
     if (w.hp <= 0 || Math.hypot(x - w.x, y - w.y) > PROMIEN_WYBUCHU_ZIEMI) return;
     atakUmiejetnosciKostura(w, staty1, x, y, 1, "odlamkowa");
 
-    // max poziom: 33% szansy na omdlenie na 1s (Arcybossy są odporne na omdlenie)
-    if (maks && w.hp > 0 && w.typ !== "arcyboss" && losujProcent() < KOSTUR_SZANSA_OMDLENIA_ZIEMI) {
-      w.ogluszonyDoCzasu = czasWirt() + KOSTUR_CZAS_OMDLENIA_ZIEMI_MS;
+    if (omdlenie && w.hp > 0 && w.typ !== "arcyboss") {
+      w.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
       rundaStaty.omdlenia += 1;
     }
   });
@@ -479,7 +483,7 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
           if (Math.hypot(rx, ry) > KOSTUR_POL_SZEROKOSCI_FALI + r * 0.5) continue;
 
           pk.trafieni.add(w.id);
-          atakUmiejetnosciKostura(w, staty1, pk.x, pk.y, 1 / 2, "potrojna");
+          atakUmiejetnosciKostura(w, staty1, pk.x, pk.y, 1, "potrojna");
           if (pWoda >= MAX_POZIOM_UMIEJETNOSCI && w.hp > 0 && losujProcent() < KOSTUR_SZANSA_ODEPCHNIECIA) {
             odepchnijWroga(w, pk.dx, pk.dy, KOSTUR_DYSTANS_ODEPCHNIECIA);
           }
@@ -501,7 +505,7 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
         if (Math.hypot(w.x - p.x, w.y - p.y) > KOSTUR_PROMIEN_TORNADA + promienWroga(w) * 0.8) return;
 
         p.trafieni.add(w.id);
-        atakUmiejetnosciKostura(w, staty1, p.x, p.y, 1 / 2, "magiczna");
+        atakUmiejetnosciKostura(w, staty1, p.x, p.y, 2, "magiczna");
         if (maks && w.hp > 0) {
           w.spowolnionyDoCzasu = czasWirt() + KOSTUR_CZAS_SPOWOLNIENIA_MS;
           w.silaSpowolnienia = KOSTUR_SPOWOLNIENIE;
@@ -584,13 +588,15 @@ function rysujPociskKostura(p) {
       ctx.translate(p.x, p.y);
       ctx.beginPath();
       ctx.arc(0, 0, R, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(190, 225, 255, 0.12)";
+      ctx.fillStyle = "rgba(190, 225, 255, 0.18)";
       ctx.fill();
 
       ctx.rotate(p.kat);
       ctx.lineCap = "round";
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(220, 240, 255, 0.9)";
+      ctx.shadowColor = "rgba(170, 220, 255, 0.95)";   // lekka poświata
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = "rgba(225, 242, 255, 0.95)";
       for (let ramie = 0; ramie < 3; ramie++) {   // spiralka z 3 ramion
         ctx.beginPath();
         const przesuniecie = ramie * (Math.PI * 2 / 3);

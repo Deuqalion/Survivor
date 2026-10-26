@@ -242,8 +242,8 @@ const affixy = [
     opis: "Dodaje {x} Prędkości ataku."
   },
   {
-    nazwa: "Przeładowanie", min: 0, max: 25, suffix: "%", pasywka: true,
-    opis: "Dodaje {x} Szybkości zaklęcia."
+    nazwa: "Destrukcja", min: 0, max: 25, suffix: "%", pasywka: true,
+    opis: "Dodaje {x} Wzmocnienia krytycznego i Wzmocnienia trucizny."
   },
   { 
     nazwa: "Zwykła strzała", 
