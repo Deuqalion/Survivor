@@ -214,6 +214,37 @@ function zbudujOknoUmiejetnosci() {
     ikona.addEventListener("mouseenter", () => pokazZadaneObrazenia(id, true));
     ikona.addEventListener("mouseleave", () => pokazZadaneObrazenia(id, false));
   });
+
+  // Najechanie na małą ikonę poziomu: podgląd wartości po jego kupieniu (tylko dla następnego poziomu)
+  okno.querySelectorAll(".umiej-poziom").forEach(el => {
+    const id = el.dataset.umiej;
+    const i = Number(el.dataset.poziom);
+    el.addEventListener("mouseenter", () => pokazPodgladPoziomu(id, i, true));
+    el.addEventListener("mouseleave", () => pokazPodgladPoziomu(id, i, false));
+  });
+}
+
+/* Opis umiejętności dla podanego poziomu + złoty bonus za max poziom (jeśli kupiona). */
+function htmlOpisu(u, s, poziom) {
+  const bonusTxt = (typeof u.bonus === "function") ? u.bonus() : u.bonus;   // bonus może zależeć od statystyk (Ogień)
+  const bonus = (s.odblokowana && poziom >= 4 && bonusTxt) ? `<div class="umiej-bonus">${bonusTxt}</div>` : "";
+  return `${u.opis(poziom)}${bonus}`;
+}
+
+/* Najechanie na NASTĘPNY niekupiony poziom (I–IV): w polu opisu pokazują się wartości,
+   jakie umiejętność będzie miała po jego kupieniu. Zjechanie przywraca aktualny opis. */
+function pokazPodgladPoziomu(id, indeksPoziomu, pokaz) {
+  const u = UMIEJETNOSCI.find(x => x.id === id);
+  const s = umiejetnosciStan[id];
+  const opis = document.querySelector(`#umiej-tekst-${id} .umiej-tekst-opis`);
+  if (!u || !s || !opis) return;
+
+  if (pokaz) {
+    if (indeksPoziomu !== s.poziom || s.poziom >= 4) return;   // tylko kolejny poziom do kupienia
+    opis.innerHTML = htmlOpisu(u, s, s.poziom + 1);
+  } else {
+    opis.innerHTML = htmlOpisu(u, s, s.poziom);
+  }
 }
 
 /* ---------- tooltip: obrażenia zadane przez umiejętność ---------- */
@@ -289,9 +320,7 @@ function odswiezUmiejetnosci() {
 
     const tekst = document.getElementById(`umiej-tekst-${u.id}`);
     if (tekst) {
-      const bonusTxt = (typeof u.bonus === "function") ? u.bonus() : u.bonus;   // bonus może zależeć od statystyk (Ogień)
-      const bonus = (s.odblokowana && s.poziom >= 4 && bonusTxt) ? `<div class="umiej-bonus">${bonusTxt}</div>` : "";
-      tekst.innerHTML = `<div class="umiej-tekst-wew umiej-tekst-opis">${u.opis(s.poziom)}${bonus}</div>` +
+      tekst.innerHTML = `<div class="umiej-tekst-wew umiej-tekst-opis">${htmlOpisu(u, s, s.poziom)}</div>` +
         `<div class="umiej-tekst-wew umiej-tekst-obr">${trescZadanychObrazen(u.id)}</div>`;
       tekst.classList.toggle("przygaszony", !s.odblokowana);
     }

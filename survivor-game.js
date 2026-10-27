@@ -139,7 +139,8 @@ let falaArcybossAktywna = false;
 let nastepnyProgArcybossa = PROG_FALI_ARCYBOSSA;
 let arcybossyPokonane = 0;
 let numerFaliArcybossa = 0; // którą falę Arcybossa właśnie spawnujemy (1, 2, 3, ...)
-let wykorzystaneWskrzeszenie = false;
+let wykorzystaneWskrzeszenie = false;          // wskrzeszenie z ulepszenia zbroi
+let wykorzystaneWskrzeszenieStartowe = false;  // darmowe wskrzeszenie na początku gry
 let wskrzeszenieDoCzasu = 0; // czasWirt() do kiedy trwa pulsowanie areny
 
 /* Zegar gry: idzie tylko gdy pętla działa i uwzględnia prędkość gry (x1 / x1,5 / x2).
@@ -1347,8 +1348,12 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
   aktualizujPasekPostaci();
 
   if (postac.hp <= 0) {
-    if (staty1.wskrzeszenieDostepne && !wykorzystaneWskrzeszenie) {
-      wykorzystaneWskrzeszenie = true;
+    // Najpierw zużywane jest darmowe wskrzeszenie z początku gry, potem (jeśli jest) to z ulepszenia zbroi.
+    const uzyjStartowego = !wykorzystaneWskrzeszenieStartowe;
+    const uzyjZUlepszenia = !uzyjStartowego && staty1.wskrzeszenieDostepne && !wykorzystaneWskrzeszenie;
+    if (uzyjStartowego || uzyjZUlepszenia) {
+      if (uzyjStartowego) wykorzystaneWskrzeszenieStartowe = true;
+      else wykorzystaneWskrzeszenie = true;
       postac.hp = Math.round(postac.maxHp * 0.75);
       aktualizujPasekPostaci();
 
@@ -2599,6 +2604,7 @@ function rozpocznijGre() {
   ostatniCzas = 0;
   licznikRegeneracjiMs = 0;
   wykorzystaneWskrzeszenie = false;
+  wykorzystaneWskrzeszenieStartowe = false;
   wskrzeszenieDoCzasu = 0;
 
   ulepszoneItemySet.clear();

@@ -25,6 +25,22 @@ function definicjaDlaItemu(itemId, nazwa) {
   return zakres ? Object.assign({}, def, zakres) : def;
 }
 
+/* Wartość affixu: losowa liczba całkowita z zakresu albo (gdy definicja ma `krok`) wielokrotność kroku,
+   np. 0,5–3% co 0,5. */
+function losujWartoscAffixu(def) {
+  if (def.krok) {
+    const n = Math.round((def.max - def.min) / def.krok);
+    return Math.round((def.min + losujLiczbe(0, n) * def.krok) * 100) / 100;
+  }
+  return losujLiczbe(def.min, def.max);
+}
+
+/* Affixy wzajemnie wykluczające się na itemie (item.wykluczajace = [[A, B], ...]). */
+function czyAffixWykluczony(item, nazwa, uzywaneNazwy) {
+  return (item.wykluczajace || []).some(para =>
+    para.includes(nazwa) && para.some(inna => inna !== nazwa && uzywaneNazwy.has(inna)));
+}
+
 function maksymalnaLiczbaAffixow(item) {
   if (item.maxAffixow) return item.maxAffixow;   // np. Amunicja pistoletu ma 4 affixy
   if (item.nazwa === "strzala") return 3;
@@ -73,7 +89,7 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
     if (wymusWartosciStartowe && wynik.length === 0 && WARTOSCI_STARTOWE_AFFIXOW[definicja.nazwa] !== undefined) {
       wartosc = WARTOSCI_STARTOWE_AFFIXOW[definicja.nazwa];
     } else {
-      wartosc = itemPierwotny ? definicja.max : losujLiczbe(definicja.min, definicja.max);
+      wartosc = itemPierwotny ? definicja.max : losujWartoscAffixu(definicja);
     }
 
     wynik.push({
@@ -105,7 +121,8 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
     .map(nazwa => definicjaDlaItemu(itemId, nazwa))
     .filter(Boolean)
     .filter(affix => !staleAffixy.includes(affix.nazwa))
-    .filter(affix => !wynik.some(w => w.nazwa === affix.nazwa));
+    .filter(affix => !wynik.some(w => w.nazwa === affix.nazwa))
+    .filter(affix => !czyAffixWykluczony(item, affix.nazwa, new Set(wynik.map(w => w.nazwa))));
 
   while (wynik.length < liczbaAffixow && dostepne.length > 0) {
     const indeks = losujLiczbe(0, dostepne.length - 1);
@@ -113,7 +130,7 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
 
     wynik.push({
       nazwa: wybrany.nazwa,
-      wartosc: itemPierwotny ? wybrany.max : losujLiczbe(wybrany.min, wybrany.max),
+      wartosc: itemPierwotny ? wybrany.max : losujWartoscAffixu(wybrany),
       suffix: wybrany.suffix || "",
       pasywka: !!wybrany.pasywka,
       opis: wybrany.opis || "",
@@ -121,6 +138,9 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
     });
 
     dostepne.splice(indeks, 1);
+    // wybrany affix wyklucza swoją parę (np. Wartość ataku <-> Obrażenia umiejętności)
+    const uzyte = new Set(wynik.map(w => w.nazwa));
+    dostepne = dostepne.filter(a => !czyAffixWykluczony(item, a.nazwa, uzyte));
   }
 
   return { affixy: wynik, pierwotny: itemPierwotny };
@@ -150,7 +170,8 @@ function dodajJedenNowyAffix(gracz, itemId) {
     const dostepne = item.mozliweAffixy
       .map(nazwa => definicjaDlaItemu(itemId, nazwa))
       .filter(Boolean)
-      .filter(affix => !uzywaneNazwy.has(affix.nazwa));
+      .filter(affix => !uzywaneNazwy.has(affix.nazwa))
+      .filter(affix => !czyAffixWykluczony(item, affix.nazwa, uzywaneNazwy));
 
     if (dostepne.length === 0) return false;
     wybranaDefinicja = dostepne[losujLiczbe(0, dostepne.length - 1)];
@@ -159,7 +180,7 @@ function dodajJedenNowyAffix(gracz, itemId) {
   const pierwotny = !!stan[gracz].pierwotne[itemId];
   obecne.push({
     nazwa: wybranaDefinicja.nazwa,
-    wartosc: pierwotny ? wybranaDefinicja.max : losujLiczbe(wybranaDefinicja.min, wybranaDefinicja.max),
+    wartosc: pierwotny ? wybranaDefinicja.max : losujWartoscAffixu(wybranaDefinicja),
     suffix: wybranaDefinicja.suffix || "",
     pasywka: !!wybranaDefinicja.pasywka,
     opis: wybranaDefinicja.opis || "",

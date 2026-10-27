@@ -18,6 +18,7 @@ function renderujStatyGracza() {
     { nazwa: "Całkowite PŻ", wartosc: fmtL(s.pz), glowna: true },
     { nazwa: "Całkowite obrażenia", wartosc: fmtL((s.bazoweObrazenia || 0) + (typeof bonusObrazenZZabojstw === "function" ? bonusObrazenZZabojstw() : 0)), glowna: true },
     { nazwa: "Obrażenia umiejętności", wartosc: fmtP(s.obrazeniaUmiejetnosci) },
+    { nazwa: "Prędkość ataku", wartosc: `${(1000 / pobierzCzasAtakuGracza()).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/s` },
     { nazwa: "Szybkość zaklęcia", wartosc: fmtP(s.szybkoscZaklecia) },
     { nazwa: "Pancerz", wartosc: fmtL(s.pancerz) },
     { nazwa: "Szansa kryt", wartosc: fmtP(s.kryt) },

@@ -12,7 +12,7 @@
    ============================================================ */
 
 const SHURIKEN_PREDKOSC = 1000;
-const SHURIKEN_PROMIEN_TRAFIENIA = 14;
+const SHURIKEN_PROMIEN_TRAFIENIA = 12;
 const SHURIKEN_PROMIEN_RYSOWANIA = 11;
 const SHURIKEN_PROMIEN_ZWYKLEGO = 14;      // zwykły atak jest nieco większy niż Lotos
 
@@ -27,6 +27,7 @@ const OGNISTY_SHURIKEN_PODPALENIE_BAZA = 0.05;             // jak Ogień Kostura
 
 /* Rykoszet */
 const RYKOSZET_ZASIEG = PROMIEN_OGNIA * 2 * 2.5;           // 2,5x średnica obrażeń obszarowych = 550
+const RYKOSZET_EFEKTYWNOSC = [0.5, 0.6, 0.7, 0.8, 0.9];     // obrażenia (i siła efektów) odbicia względem trafienia
 const RYKOSZET_WZROST_OBRAZEN = 0.15;                      // max poziom: +15% za każde odbicie
 
 /* Bumerang */
@@ -74,7 +75,7 @@ function obrocShurikena(dx, dy, kat) {
 }
 
 function nowyShuriken(x, y, dx, dy, opcje) {
-  return Object.assign({
+  const o = Object.assign({
     typ: "shuriken", x, y, dx, dy,
     kat: Math.random() * Math.PI * 2,
     trafieni: new Set(),
@@ -82,6 +83,10 @@ function nowyShuriken(x, y, dx, dy, opcje) {
     przebija: false, mnoznikPrzebicia: 1, liczbaTrafien: 0,
     mnoznikSkilla: 1, sila: 1, ninjutsu: false
   }, opcje || {});
+  // skuteczność "bazowa" (Ninjutsu 75%/100%): od niej liczona jest efektywność odbić Rykoszetu
+  if (o.bazaSkilla === undefined) o.bazaSkilla = o.mnoznikSkilla;
+  if (o.bazaSila === undefined) o.bazaSila = o.sila;
+  return o;
 }
 
 /* ---------- ATAK GRACZA ---------- */
@@ -232,9 +237,11 @@ function trafienieShurikenem(w, staty1, pk, mozeOdbic) {
     const nastepny = znajdzNajblizszegoWrogaOd({ id: w.id, x, y }, pk.trafieni);
     if (nastepny && Math.hypot(nastepny.x - x, nastepny.y - y) <= RYKOSZET_ZASIEG) {
       const k = kierunekShurikena(x, y, nastepny);
+      const efektywnosc = RYKOSZET_EFEKTYWNOSC[Math.max(0, poziomUmiejetnosci("elektryczna"))];
       shurikenKolejka.push(nowyShuriken(x, y, k.dx, k.dy, {
         odbicia: pk.odbicia - 1, nrOdbicia: pk.nrOdbicia + 1,
-        mnoznikSkilla: pk.mnoznikSkilla, sila: pk.sila, ninjutsu: pk.ninjutsu,
+        mnoznikSkilla: pk.bazaSkilla * efektywnosc, sila: pk.bazaSila * efektywnosc,
+        bazaSkilla: pk.bazaSkilla, bazaSila: pk.bazaSila, ninjutsu: pk.ninjutsu,
         trafieni: new Set(pk.trafieni), kat: pk.kat
       }));
     }

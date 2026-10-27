@@ -99,7 +99,7 @@ const UMIEJETNOSCI_SHURIKEN = [
   {
     id: "elektryczna", nazwa: "Rykoszet", plik: "SHURIKENY/rykoszet.png", kol: 0, wiersz: 1,
     bonus: "Każde odbicie: +15% obrażeń.",
-    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span>.`
+    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając <span class="umiej-lvl">${[50, 60, 70, 80, 90][p]}%</span> obrażeń całkowitych.`
   },
   {
     id: "magiczna", nazwa: "Bumerang", plik: "SHURIKENY/bumerang.png", kol: 1, wiersz: 1,
@@ -144,14 +144,13 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 4500, max: 6000 } },
     bron: "pistolet.png", amunicja: "amunicja.png",
     umiejetnosci: UMIEJETNOSCI_PISTOLET,
-    affixyAmunicji: ["Wartość ataku", "Szybkość zaklęcia", "Szansa na otrucie", "Destrukcja"],
-    maxAffixowAmunicji: 4,
-    zakresyAmunicji: { "Szansa na otrucie": { min: 0, max: 15 } },
+    affixyAmunicji: ["Wartość ataku", "Szybkość zaklęcia", "Destrukcja"],
+    zakresyAmunicji: {},
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   shuriken: {
     nazwa: "Shuriken", nazwaAmunicji: "Suriken", ikona: "✴️",
-    zakresyBroni: { "Podstawowe obrażenia": { min: 3500, max: 5000 } },
+    zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "shuriken.png", amunicja: "shuriken2.png",
     umiejetnosci: UMIEJETNOSCI_SHURIKEN,
     affixyAmunicji: ["Wartość ataku", "Prędkość ataku", "Zręczność"],

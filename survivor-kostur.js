@@ -524,8 +524,20 @@ function rysujPociskKostura(p) {
   switch (p.typ) {
     case "kolo": {
       ctx.save();
-      ctx.shadowColor = "#b9a4ff";
-      ctx.shadowBlur = 10;
+      if (p.przebija) {
+        // główny atak (przebija wrogów): okrąg z silną poświatą
+        ctx.shadowColor = "#a98bff";
+        ctx.shadowBlur = 24;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, KOSTUR_PROMIEN_KOLA + 1, 0, Math.PI * 2);
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = "rgba(170, 140, 255, 0.45)";
+        ctx.stroke();
+        ctx.shadowBlur = 12;
+      } else {
+        ctx.shadowColor = "#b9a4ff";
+        ctx.shadowBlur = 10;
+      }
       ctx.beginPath();
       ctx.arc(p.x, p.y, KOSTUR_PROMIEN_KOLA, 0, Math.PI * 2);   // pusty w środku
       ctx.lineWidth = 3.5;

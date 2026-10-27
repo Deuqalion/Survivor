@@ -80,7 +80,7 @@ body { transform: none; }
 #staty-gracza {
   width: 100%;
   box-sizing: border-box;
-  padding: 0 16px;
+  padding: 0 28px;   /* było 16px: kolumna węższa o ok. szerokość 2 liter (po 12px z każdej strony) */
 }
 
 .staty-wiersz {
@@ -98,6 +98,10 @@ body { transform: none; }
   font-weight: bold;
   padding: 5px 0;
 }
+
+/* Całkowite PŻ i Całkowite obrażenia: mniejszy odstęp między nimi */
+.staty-wiersz.glowna + .staty-wiersz.glowna { padding-top: 0; }
+.staty-wiersz.glowna:has(+ .staty-wiersz.glowna) { padding-bottom: 0; border-bottom: none; }
 
 .staty-nazwa  { color: #e6ecff; text-shadow: 1px 1px 2px #000; }
 .staty-wartosc { color: #ffd966; font-weight: bold; text-shadow: 1px 1px 2px #000; }

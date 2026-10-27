@@ -39,7 +39,11 @@ const itemy = {
     obraz: "naramienniki.png",
     pozycja: { kolumna: 3, wiersz: 2 },
     stalyAffix: null,
+    // "Obrażenia umiejętności" 1–4% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 4 } },
+    wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
+      "Obrażenia umiejętności",
       "Szansa na krwawienie",
       "Dodatkowe PŻ",
       "Wartość ataku",
@@ -54,7 +58,11 @@ const itemy = {
     obraz: "rekawice.png",
     pozycja: { kolumna: 1, wiersz: 2 },
     stalyAffix: null,
+    // "Obrażenia umiejętności" 1–4% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 4 } },
+    wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
+      "Obrażenia umiejętności",
       "Szansa na krwawienie",
       "Dodatkowe PŻ",
       "Wartość ataku",
@@ -98,7 +106,11 @@ const itemy = {
     obraz: "bransoleta.png",
     pozycja: { kolumna: 4, wiersz: 2 },
     stalyAffix: null,
+    // "Obrażenia umiejętności" 1–4% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 4 } },
+    wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
+      "Obrażenia umiejętności",
       "Szansa na krwawienie",
       "Dodatkowe PŻ",
       "Wartość ataku",
@@ -242,7 +254,7 @@ const affixy = [
     opis: "Dodaje {x} Prędkości ataku."
   },
   {
-    nazwa: "Destrukcja", min: 0, max: 25, suffix: "%", pasywka: true,
+    nazwa: "Destrukcja", min: 0, max: 30, suffix: "%", pasywka: true,
     opis: "Dodaje {x} Wzmocnienia krytycznego i Wzmocnienia trucizny."
   },
   { 
