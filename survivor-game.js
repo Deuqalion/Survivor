@@ -225,8 +225,8 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
       else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +25%") szybkoscZaklecia += val;
       else if (nazwa === "Destrukcja") { wzmocnienieKrytyczne += val; wzmocnienieTrucizny += val; }   // Amunicja: pasywka = +x pp do obu wzmocnień
-      else if (nazwa === "Czarnoksięstwo") obrazeniaUmiejetnosci += val; // Księga: pasywka = Obrażenia umiejętności
-      else if (nazwa === "Prędkość ruchu: +15%") predkoscRuchuBonus += val;
+      else if (nazwa === "Czarnoksięstwo") { obrazeniaUmiejetnosci += val; szybkoscZaklecia += val; }   // Księga: pasywka = +x pp Obrażeń umiejętności i Szybkości zaklęcia
+      else if (nazwa === "Prędkość ruchu: +20%") predkoscRuchuBonus += val;
       else if (nazwa === "Regeneracja PŻ 5%/sek") regeneracjaPzSek += val;
       else if (nazwa === "Wskrzeszenie") wskrzeszenieDostepne = true;
       else if (nazwa === "Obrażenia obszarowe") obrazeniaObszaroweDostepne = true;
@@ -295,7 +295,7 @@ function obliczStatystyki(gracz) {
 
 const MAPA_ULEPSZEN_ITEMOW = {
   "bron": "Ulepszenie broni",
-  "buty": "Prędkość ruchu: +15%",
+  "buty": "Prędkość ruchu: +20%",
   "helm": "Regeneracja PŻ 5%/sek",
   "zbroja": "Wskrzeszenie",
   "naramienniki": "Dodatkowe PŻ: 4000",
@@ -1428,7 +1428,7 @@ function znajdzNajblizszegoWrogaOd(cel, wykluczone = new Set()) {
 function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
 
-  const poboczny = !!opcje.poboczny;
+  const poboczny = !!opcje.poboczny || !!opcje.bezEfektow;   // bezEfektow: tylko obrażenia (kryt/przeszywka), bez trucizny/krwawienia/omdlenia
   const mnoznikSkilla = opcje.mnoznikSkilla ?? 1;
 
   const podstObrazenia = staty1.podstawoweObrażenia || 3000;
@@ -1496,6 +1496,10 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   }
 
   if (poboczny) {
+    if (opcje.bezEfektow) {                 // np. śrut Shotguna
+      if (cel.hp <= 0) zabijWroga(cel);
+      return dmg;
+    }
     // Strzała boczna: obrażenia + kradzież życia. Na maksymalnym poziomie Potrójnej
     // dodatkowo może nałożyć Otrucie i Krwawienie w 80% skuteczności
     // (Ognistą strzałę obsługuje aktualizujPociskiGracza).

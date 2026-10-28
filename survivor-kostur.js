@@ -15,6 +15,7 @@
 const KOSTUR_PREDKOSC_KOLA = 700;
 const KOSTUR_PROMIEN_KOLA = 11;
 const KOSTUR_PROMIEN_TRAFIENIA_KOLA = 12;
+const KOSTUR_EFEKTYWNOSC_DODATKOWYCH = 0.5;   // dodatkowe ataki z Pioruna: 50% obrażeń fizycznych i siły efektów (np. krwawienia)
 
 /* Piorun */
 const KOSTUR_SZANSA_PIORUNA = 33;
@@ -116,13 +117,15 @@ function atakKostura(cel, staty1) {
     const d = Math.hypot(dx, dy) || 1;
     pociskiGracza.push({
       typ: "kolo", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d,
-      trafieni: new Set(), mnoznikPrzebicia: 1, przebija
+      trafieni: new Set(), mnoznikPrzebicia: 1, przebija,
+      mnoznikSkilla: przebija ? 1 : KOSTUR_EFEKTYWNOSC_DODATKOWYCH,
+      sila: przebija ? 1 : KOSTUR_EFEKTYWNOSC_DODATKOWYCH
     });
   });
 }
 
 function trafienieKolem(wrog, staty1, p) {
-  const dmg = wykonajPojedynczyAtak(wrog, staty1, p.x, p.y, p.mnoznikPrzebicia);
+  const dmg = wykonajPojedynczyAtak(wrog, staty1, p.x, p.y, p.mnoznikPrzebicia, { mnoznikSkilla: p.mnoznikSkilla ?? 1, silaEfektow: p.sila ?? 1 });
   procAffixuOgnistejStrzaly(wrog, dmg, staty1);   // affix "Ognista strzała" z ekwipunku działa jak zawsze
   procPioruna(wrog, staty1);
   procWybuchuZwyklegoAtaku(wrog, staty1);

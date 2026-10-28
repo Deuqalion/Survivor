@@ -832,6 +832,7 @@
    ========================================= */
 
 .affix-pasywka {
+  margin-top: 14px;   /* większy odstęp między zwykłymi affixami a dużym affixem specjalnym */
   display: flex;
   flex-direction: column;
   justify-content: center;

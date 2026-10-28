@@ -28,7 +28,7 @@ const UMIEJ_WIERSZE_Y = [150, 648, 1146];
 const UMIEJ_UKLAD_KAFLA = {
   ikona: { x: 192, y: 205, r: 170 },                 // duża okrągła ikona
   nazwaBox: { x: 345, y: 6, w: 610, h: 56 },         // nazwa nad złotą tabliczką
-  tekst: { x: 345, y: 82, w: 610, h: 148 },          // pole opisu na tabliczce
+  tekst: { x: 345, y: 82, w: 625, h: 148 },          // pole opisu na tabliczce
   poziomy: [{ x: 433, y: 327 }, { x: 584, y: 327 }, { x: 733, y: 327 }, { x: 882, y: 327 }]
 };
 
@@ -55,6 +55,14 @@ function statyUmiejetnosci() {
     podst: s["podstawoweObrażenia"] || 3000,
     um: s.obrazeniaUmiejetnosci || 0
   };
+}
+
+/* Obrażenia fizyczne pokazywane w opisach (np. Shotgun):
+   (Podstawowe obrażenia + Wartość ataku + zabici) * mnożnik — czyli "Całkowite obrażenia" * mnożnik. */
+function dmgFizyczne(mnoznik) {
+  const s = (typeof stan !== "undefined" && stan[1] && stan[1].staty) || {};
+  const zabici = (typeof bonusObrazenZZabojstw === "function") ? bonusObrazenZZabojstw() : 0;
+  return fmtUmiej(((s.bazoweObrazenia || 3000) + zabici) * mnoznik);
 }
 
 /* Obrażenia magiczne pokazywane w opisach:

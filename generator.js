@@ -54,7 +54,7 @@ const WARTOSCI_STARTOWE_AFFIXOW = {
 };
 
 const WYMUSZONE_AFFIXY_STARTOWE = {
-  5: { nazwa: "Kradzież życia", wartosc: 10 }
+  5: { nazwa: "Kradzież życia", wartosc: 8 }   // startowe spodnie: maksimum affixu
 };
 
 /* Dawniej ulepszona strzała zamieniała "Zwykła strzała" na "Elektryczna strzała".

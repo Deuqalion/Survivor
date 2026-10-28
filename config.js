@@ -217,7 +217,7 @@ const affixy = [
   { nazwa: "Dodatkowe PŻ", min: 1500, max: 4000, suffix: "" },
   { nazwa: "Wartość ataku", min: 60, max: 500, suffix: "" },
   { nazwa: "Pancerz", min: 5, max: 34, suffix: "" },
-  { nazwa: "Kradzież życia", min: 1, max: 10, suffix: "%" },
+  { nazwa: "Kradzież życia", min: 1, max: 8, suffix: "%" },
   { nazwa: "Wzmocnienie PŻ", min: 0, max: 20, suffix: "%" },
   { nazwa: "Wzmocnienie Pancerza", min: 0, max: 15, suffix: "%" },
   { nazwa: "Wzmocnienie trucizny", min: 0, max: 15, suffix: "%" },
@@ -228,7 +228,7 @@ const affixy = [
   
   // Affixy ulepszeń
   { nazwa: "Obrażenia umiejętności: +10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
-  { nazwa: "Prędkość ruchu: +15%", min: 15, max: 15, suffix: "%", ulepszenie: true },
+  { nazwa: "Prędkość ruchu: +20%", min: 20, max: 20, suffix: "%", ulepszenie: true },
   { nazwa: "Regeneracja PŻ 5%/sek", min: 5, max: 5, suffix: "%", ulepszenie: true },
   { nazwa: "Wskrzeszenie", min: 1, max: 1, suffix: "", pasywka: true, ulepszenie: true, opis: "Może być użyte raz na grę. Po śmiertelnych obrażeniach unieruchamia wrogów na 3s, przywraca 75% PŻ i daje odporność." },
   { nazwa: "Dodatkowe PŻ: 4000", min: 4000, max: 4000, suffix: "", ulepszenie: true },
@@ -247,7 +247,7 @@ const affixy = [
   // nazwa jest tylko etykietą — patrz obliczStatystyki w survivor-game.js)
   {
     nazwa: "Czarnoksięstwo", min: 0, max: 5, suffix: "%", pasywka: true,
-    opis: "Dodaje {x} Obrażeń umiejętności."
+    opis: "Dodaje {x} Obrażeń umiejętności i Szybkości zaklęcia."
   },
   {
     nazwa: "Zręczność", min: 0, max: 35, suffix: "%", pasywka: true,

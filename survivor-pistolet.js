@@ -263,13 +263,12 @@ function aktualizujPociskPistoletu(p, dtMs, staty1) {
     case "srut": {
       const pShotgun = poziomUmiejetnosci("potrojna");
       const przebija = pShotgun >= MAX_POZIOM_UMIEJETNOSCI;
-      const mnoznikSrutu = (1 + pShotgun) / 2;      // x1/2, x1, x1 1/2, x2, x2 1/2
       return ruchZPodkrokami(p, SHOTGUN_PREDKOSC, dtMs, pk => {
         for (const w of wrogowie.slice()) {
           if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
           if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + PISTOLET_PROMIEN_TRAFIENIA) continue;
           pk.trafieni.add(w.id);
-          wykonajAtakMagiczny(w, staty1, pk.x, pk.y, mnoznikSrutu, { bezLinii: true, zrodlo: "potrojna" });
+          wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, 1, { bezEfektow: true, zrodloDmg: "potrojna" });   // fizyczne, z obrażeń całkowitych
           if (!przebija) return true;       // pierwszy napotkany cel
         }
         return false;
@@ -456,7 +455,7 @@ function rysujPociskPistoletu(p) {
       // wąski ogon, szeroki przód pocisku (zaokrąglony nos)
       const kat = Math.atan2(p.dy, p.dx);
       const px = -p.dy, py = p.dx;
-      const dlugosc = 42, szerPrzod = 6.5, szerOgon = 0.8;
+      const dlugosc = 48, szerPrzod = 10.5, szerOgon = 1.8;
       const tx = p.x - p.dx * dlugosc, ty = p.y - p.dy * dlugosc;
       ctx.save();
       ctx.shadowColor = "#ff2a2a";
@@ -476,7 +475,7 @@ function rysujPociskPistoletu(p) {
       ctx.beginPath();
       ctx.moveTo(p.x - p.dx * 18, p.y - p.dy * 18);
       ctx.lineTo(p.x + p.dx * 4, p.y + p.dy * 4);
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 4.5;
       ctx.lineCap = "round";
       ctx.strokeStyle = "#ffd6d6";
       ctx.stroke();

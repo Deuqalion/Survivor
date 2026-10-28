@@ -23,7 +23,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "elektryczna", nazwa: "Piorun", plik: "KOSTURY/piorun.png", kol: 0, wiersz: 0,
     bonus: "Pioruny są obszarowe.",
-    opis: p => `Atakujesz <span class="umiej-lvl">${2 + p}</span> wrogów mając 33% szansy na porażenie go i najbliższego wroga za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
+    opis: p => `Atakujesz dodatkowe cele:<span class="umiej-lvl">${1 + p}</span> za 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Ogień", plik: "KOSTURY/ogien.png", kol: 1, wiersz: 0,
@@ -59,9 +59,9 @@ const UMIEJETNOSCI_PISTOLET = [
     opis: p => `Co 12 sekund wystrzeliwujesz pocisk w największego wroga zadając <span class="umiej-dmg">${dmgMagiczne(3 + p)}</span> obrażeń magicznych.`
   },
   {
-    id: "potrojna", nazwa: "Shotgun", plik: "PISTOLETY/shotgun.png", kol: 1, wiersz: 0,
+    id: "potrojna", fizyczne: true, nazwa: "Shotgun", plik: "PISTOLETY/shotgun.png", kol: 1, wiersz: 0,
     bonus: "Salwa przebija wrogów.",
-    opis: p => `Co drugi atak wystrzeliwujesz salwę śrutu w ilości <span class="umiej-lvl">${2 + 2 * p}</span> zadając <span class="umiej-dmg">${dmgMagiczne((1 + p) / 2)}</span> obrażeń magicznych.`
+    opis: p => `Co drugi atak wystrzeliwujesz salwę śrutu w ilości <span class="umiej-lvl">${2 + 2 * p}</span> zadając <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne(1)}</span> obrażeń fizycznych.`
   },
   {
     id: "odlamkowa", nazwa: "Minigun", plik: "PISTOLETY/minigun.png", kol: 0, wiersz: 1,
@@ -97,7 +97,7 @@ const UMIEJETNOSCI_SHURIKEN = [
     opis: p => `Trafienia mają 25% szansy na zadanie <span class="umiej-lvl">${[40, 55, 70, 85, 100][p]}%</span> obrażeń magicznych pobliskim wrogom.`
   },
   {
-    id: "elektryczna", nazwa: "Rykoszet", plik: "SHURIKENY/rykoszet.png", kol: 0, wiersz: 1,
+    id: "elektryczna", fizyczne: true, nazwa: "Rykoszet", plik: "SHURIKENY/rykoszet.png", kol: 0, wiersz: 1,
     bonus: "Każde odbicie: +15% obrażeń.",
     opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając <span class="umiej-lvl">${[50, 60, 70, 80, 90][p]}%</span> obrażeń całkowitych.`
   },
@@ -136,7 +136,7 @@ const BRONIE = {
     bron: "kostur.png", amunicja: "ksiega.png",
     umiejetnosci: UMIEJETNOSCI_KOSTUR,
     affixyAmunicji: ["Obrażenia umiejętności", "Szybkość zaklęcia", "Czarnoksięstwo"],
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 5 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 5 }, "Szybkość zaklęcia": { min: 0, max: 20 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
   },
   pistolet: {
@@ -153,8 +153,8 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "shuriken.png", amunicja: "shuriken2.png",
     umiejetnosci: UMIEJETNOSCI_SHURIKEN,
-    affixyAmunicji: ["Wartość ataku", "Prędkość ataku", "Zręczność"],
-    zakresyAmunicji: { "Wartość ataku": { min: 60, max: 300 } },
+    affixyAmunicji: ["Szansa na otrucie", "Prędkość ataku", "Zręczność"],
+    zakresyAmunicji: { "Szansa na otrucie": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   }
 };

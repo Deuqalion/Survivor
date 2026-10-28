@@ -100,7 +100,7 @@ body { transform: none; }
 }
 
 /* Całkowite PŻ i Całkowite obrażenia: mniejszy odstęp między nimi */
-.staty-wiersz.glowna + .staty-wiersz.glowna { padding-top: 0; }
+.staty-wiersz.glowna + .staty-wiersz.glowna { padding-top: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.18); }   /* linia pod Całkowite obrażenia: lekko grubsza */
 .staty-wiersz.glowna:has(+ .staty-wiersz.glowna) { padding-bottom: 0; border-bottom: none; }
 
 .staty-nazwa  { color: #e6ecff; text-shadow: 1px 1px 2px #000; }
