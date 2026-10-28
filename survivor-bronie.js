@@ -76,7 +76,7 @@ const UMIEJETNOSCI_PISTOLET = [
   {
     id: "ognista", nazwa: "Miny", plik: "PISTOLETY/miny.png", kol: 0, wiersz: 2,
     bonus: "Wszystkie umiejętności mogą krytować za +50% obrażeń.",
-    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sek. kładziesz miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych.`
+    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sekund rozkładasz miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryczny pistolet", plik: "PISTOLETY/wampgun.png", kol: 1, wiersz: 2,
