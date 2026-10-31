@@ -143,6 +143,9 @@ function generujAffixy(itemId, iloscAffixow = null, wymusWartosciStartowe = fals
     dostepne = dostepne.filter(a => !czyAffixWykluczony(item, a.nazwa, uzyte));
   }
 
+  // duży affix specjalny (pasywka) zawsze na końcu listy
+  wynik.sort((a, b) => (a.pasywka ? 1 : 0) - (b.pasywka ? 1 : 0));
+
   return { affixy: wynik, pierwotny: itemPierwotny };
 }
 
@@ -186,6 +189,7 @@ function dodajJedenNowyAffix(gracz, itemId) {
     opis: wybranaDefinicja.opis || "",
     ulepszenie: !!wybranaDefinicja.ulepszenie
   });
+  obecne.sort((a, b) => (a.pasywka ? 1 : 0) - (b.pasywka ? 1 : 0));   // pasywka na końcu
 
   obliczStatystyki(gracz);
   odswiezBadgePierwotny(gracz, itemId);

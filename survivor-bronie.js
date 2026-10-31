@@ -23,7 +23,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "elektryczna", nazwa: "Piorun", plik: "KOSTURY/piorun.png", kol: 0, wiersz: 0,
     bonus: "Pioruny są obszarowe.",
-    opis: p => `Atakujesz dodatkowe cele:<span class="umiej-lvl">${1 + p}</span> za 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
+    opis: p => `Atakujesz dodatkowe cele w ilości <span class="umiej-lvl">${1 + p}</span> zadając 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Ogień", plik: "KOSTURY/ogien.png", kol: 1, wiersz: 0,
@@ -76,7 +76,7 @@ const UMIEJETNOSCI_PISTOLET = [
   {
     id: "ognista", nazwa: "Miny", plik: "PISTOLETY/miny.png", kol: 0, wiersz: 2,
     bonus: "Wszystkie umiejętności mogą krytować za +50% obrażeń.",
-    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sekund rozkładasz miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych.`
+    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sek. kładziesz miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryczny pistolet", plik: "PISTOLETY/wampgun.png", kol: 1, wiersz: 2,
@@ -113,6 +113,42 @@ const UMIEJETNOSCI_SHURIKEN = [
   },
   {
     id: "wampiryczna", nazwa: "Shuriken Wampira", plik: "SHURIKENY/wampszur.png", kol: 1, wiersz: 2,
+    bonus: "Kradzież życia: 5%",
+    opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
+  }
+];
+
+/* Liczba z przecinkiem dziesiętnym w opisach (1.75 -> "1,75"). */
+function plLiczba(x) { return String(x).replace(".", ","); }
+
+const UMIEJETNOSCI_PAJAK = [
+  {
+    id: "elektryczna", nazwa: "Tarantula", plik: "PAJĄKI/ptarantula.png", kol: 0, wiersz: 0,
+    bonus: "Wypuszczasz 2 Pająki.",
+    opis: p => `Co <span class="umiej-lvl">${plLiczba([2, 1.75, 1.5, 1.25, 1][p])}</span> s wypuszczasz Pająka, który atakuje najbliższego wroga zadając <span class="umiej-dmg">${dmgMagiczne([1, 1.25, 1.5, 1.75, 2][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "ognista", nazwa: "Kwasowa chmura", plik: "PAJĄKI/pkwas.png", kol: 1, wiersz: 0,
+    bonus: () => `Skażony obszar na 5 s: ${dmgMagiczne(0.35)} co 1 s.`,
+    opis: p => `Co <span class="umiej-lvl">10</span> s plujesz kwasem w skupisko wrogów zadając <span class="umiej-dmg">${dmgMagiczne([0.7, 1, 1.3, 1.6, 1.9][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "odlamkowa", nazwa: "Ptasznik", plik: "PAJĄKI/pptasznik.png", kol: 0, wiersz: 1,
+    bonus: "Obrażenia mogą krytować.",
+    opis: p => `Co <span class="umiej-lvl">${plLiczba([6, 5.25, 4.5, 3.75, 3][p])}</span> s wypuszczasz Pająka, który zadaje <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń obszarowych magicznych.`
+  },
+  {
+    id: "magiczna", nazwa: "Arachnofobia", plik: "PAJĄKI/parachnofobia.png", kol: 1, wiersz: 1,
+    bonus: "2x więcej Pająków.",
+    opis: p => `Pająki otrzymują wzmocnienie: szansa na otrucie${p >= 1 ? ", spowolnienie" : ""}${p >= 2 ? `, obrażenia +<span class="umiej-lvl">${[10, 20, 30][p - 2]}%</span>` : ""}.`
+  },
+  {
+    id: "potrojna", nazwa: "Pajęczyna", plik: "PAJĄKI/ppajeczyna.png", kol: 0, wiersz: 2,
+    bonus: "Pajęczyna powoduje omdlenie.",
+    opis: p => `Co <span class="umiej-lvl">${12 - p}</span> s rzucasz pajęczyną przebijającą <span class="umiej-lvl">${1 + p}</span> wrogów zadając im <span class="umiej-dmg">${dmgMagiczne([1, 1.75, 2.5, 3.25, 4][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "wampiryczna", nazwa: "Wampiryczny pająk", plik: "PAJĄKI/pwampir.png", kol: 1, wiersz: 2,
     bonus: "Kradzież życia: 5%",
     opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
   }
@@ -156,6 +192,19 @@ const BRONIE = {
     affixyAmunicji: ["Szansa na otrucie", "Prędkość ataku", "Zręczność"],
     zakresyAmunicji: { "Szansa na otrucie": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
+  },
+  pajak: {
+    nazwa: "Pająk", nazwaAmunicji: "Jad", ikona: "🕷️",
+    zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4500 } },
+    bron: "pajak.png", amunicja: "venom.png",
+    umiejetnosci: UMIEJETNOSCI_PAJAK,
+    // Jad: stały unikalny affix "Jad" + po jednym z dwóch par (albo-albo): Wartość ataku / Obrażenia umiejętności,
+    // Prędkość ataku / Szybkość zaklęcia
+    affixyAmunicji: ["Jad"],
+    mozliweAmunicji: ["Wartość ataku", "Obrażenia umiejętności", "Prędkość ataku", "Szybkość zaklęcia"],
+    wykluczajaceAmunicji: [["Wartość ataku", "Obrażenia umiejętności"], ["Prędkość ataku", "Szybkość zaklęcia"]],
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
   }
 };
 
@@ -179,7 +228,8 @@ function zastosujBron(id) {
   // Affixy przedmiotu amunicji (slot 12) zależą od broni: stałe = możliwe, zakresy i ulepszenie
   const amunicja = itemy[ITEM_STRZALA];
   amunicja.staleAffixy = b.affixyAmunicji.slice();
-  amunicja.mozliweAffixy = b.affixyAmunicji.slice();
+  amunicja.mozliweAffixy = (b.mozliweAmunicji || b.affixyAmunicji).slice();
+  amunicja.wykluczajace = b.wykluczajaceAmunicji || [];
   amunicja.zakresy = b.zakresyAmunicji;
   amunicja.maxAffixow = b.maxAffixowAmunicji || 3;
   itemy[ITEM_BRON].zakresy = b.zakresyBroni;   // Podstawowe obrażenia zależne od broni

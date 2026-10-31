@@ -46,8 +46,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.4cqw;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1cqw;
 }
 
 .bron-karta {
@@ -96,8 +96,8 @@
 
 .bron-obrazy img {
   display: block;
-  width: 7.2cqw;
-  height: 8.6cqw;
+  width: 6.2cqw;
+  height: 7.6cqw;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9));
   user-select: none;
@@ -108,7 +108,7 @@
   margin-top: 1cqw;
   text-align: center;
   color: #ffd700;
-  font-size: 1.75cqw;
+  font-size: 1.5cqw;
   font-weight: bold;
   line-height: 1.15;
   text-shadow: 2px 3px 4px #000, 0 0 10px rgba(255, 215, 0, 0.3);
@@ -127,7 +127,7 @@
 
 .bron-umiejetnosci li {
   margin: 0.45cqw 0;
-  font-size: 1.2cqw;
+  font-size: 1.05cqw;
   font-weight: bold;
   color: #e6ecff;
   text-shadow: 1px 1px 2px #000;

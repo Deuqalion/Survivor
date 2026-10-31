@@ -254,6 +254,10 @@ const affixy = [
     opis: "Dodaje {x} Prędkości ataku."
   },
   {
+    nazwa: "Jad", min: 0, max: 10, suffix: "%", pasywka: true,
+    opis: "Dodaje {x} Szansy na otrucie i Wzmocnienia trucizny."
+  },
+  {
     nazwa: "Destrukcja", min: 0, max: 30, suffix: "%", pasywka: true,
     opis: "Dodaje {x} Wzmocnienia krytycznego i Wzmocnienia trucizny."
   },

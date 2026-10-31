@@ -224,6 +224,7 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
       else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +25%") szybkoscZaklecia += val;
+      else if (nazwa === "Jad") { otrucie += val; wzmocnienieTrucizny += val; }   // Jad: pasywka = +x pp Szansy na otrucie i Wzmocnienia trucizny
       else if (nazwa === "Destrukcja") { wzmocnienieKrytyczne += val; wzmocnienieTrucizny += val; }   // Amunicja: pasywka = +x pp do obu wzmocnień
       else if (nazwa === "Czarnoksięstwo") { obrazeniaUmiejetnosci += val; szybkoscZaklecia += val; }   // Księga: pasywka = +x pp Obrażeń umiejętności i Szybkości zaklęcia
       else if (nazwa === "Prędkość ruchu: +20%") predkoscRuchuBonus += val;
@@ -1583,6 +1584,7 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
   let mnoznikKrytuMagii = MNOZNIK_KRYTA_ELEKTRYCZNEJ;
   const bonusKrytu = (typeof bonusKrytuMagii === "function") ? bonusKrytuMagii(staty1) : null;
   if (bonusKrytu) { szansaKrytuMagii = bonusKrytu.szansa; mnoznikKrytuMagii = bonusKrytu.mnoznik; }
+  if (opcje.szansaKrytu !== undefined) { szansaKrytuMagii = opcje.szansaKrytu; mnoznikKrytuMagii = opcje.mnoznikKrytu || MNOZNIK_KRYTA_ELEKTRYCZNEJ; }   // np. Ptasznik (max)
   const krytMagiczny = szansaKrytuMagii > 0 && losujProcent() < szansaKrytuMagii;
   // (Podstawowe obrażenia + zabici); opcje.podstawa podmienia "Podstawowe obrażenia" (np. 700 dla wybuchu Ognia)
   const podstawaObrazen = opcje.podstawa ?? (staty1.podstawoweObrażenia || 3000);
@@ -1703,6 +1705,8 @@ function atakGracza() {
   if (typeof czyPistolet === "function" && czyPistolet()) { atakPistoletu(cel, staty1); return; }
   // Shuriken: własny atak i umiejętności — survivor-shuriken.js
   if (typeof czyShuriken === "function" && czyShuriken()) { atakShurikena(cel, staty1); return; }
+  // Pająk: własny atak i umiejętności — survivor-pajak.js
+  if (typeof czyPajak === "function" && czyPajak()) { atakPajaka(cel, staty1); return; }
 
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
@@ -1871,6 +1875,7 @@ function aktualizujPociskiGracza(dtMs) {
     if (typeof jestPociskKostura === "function" && jestPociskKostura(pocisk)) return aktualizujPociskKostura(pocisk, dtMs, staty1);
     if (typeof jestPociskPistoletu === "function" && jestPociskPistoletu(pocisk)) return aktualizujPociskPistoletu(pocisk, dtMs, staty1);
     if (typeof jestPociskShurikena === "function" && jestPociskShurikena(pocisk)) return aktualizujPociskShurikena(pocisk, dtMs, staty1);
+    if (typeof jestPociskPajaka === "function" && jestPociskPajaka(pocisk)) return aktualizujPociskPajaka(pocisk, dtMs, staty1);
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
 
@@ -2286,6 +2291,7 @@ function rysujGre() {
   // Tło areny (arena.jpg) jest ustawione w CSS na .survivor-canvas-wrap — canvas tylko czyścimy.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (typeof rysujPlamyZiemi === "function") rysujPlamyZiemi();   // ślady po Ziemi Kostura (pod wszystkim)
+  if (typeof rysujPlamyPajaka === "function") rysujPlamyPajaka(); // skażone obszary Kwasowej chmury
 
   ctx.beginPath();
   ctx.arc(postac.x, postac.y, 20, 0, Math.PI * 2);
@@ -2349,6 +2355,7 @@ function rysujGre() {
     if (typeof rysujPociskKostura === "function" && rysujPociskKostura(p)) return;
     if (typeof rysujPociskPistoletu === "function" && rysujPociskPistoletu(p)) return;
     if (typeof rysujPociskShurikena === "function" && rysujPociskShurikena(p)) return;
+    if (typeof rysujPociskPajaka === "function" && rysujPociskPajaka(p)) return;
     if (p.typ === "magiczna") {
       // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
       const r = 7;
@@ -2496,6 +2503,15 @@ function aktualizujPanelWroga() {
   document.getElementById("wrog-hp-tekst").textContent = `${fmtLiczbaPL(Math.max(0, wrog.hp))} / ${fmtLiczbaPL(wrog.maxHp)}`;
   document.getElementById("wrog-nazwa").textContent = (NAZWY_TYPOW_WROGOW[wrog.typ] || "Wróg") + (wrog.odporny ? " (odporny)" : "");
   document.getElementById("wrog-pancerz").textContent = fmtLiczbaPL(wrog.pancerz);
+  const atakEl = document.getElementById("wrog-atak");
+  if (atakEl) {
+    let atak;
+    if (wrog.typ === "boss") atak = fmtLiczbaPL(dmgBossa());
+    else if (wrog.typ === "arcyboss") atak = `${fmtLiczbaPL(wrog.dmgPocisk)} × ${wrog.liczbaPociskow}`;
+    else if (wrog.typ === "ranged") atak = fmtLiczbaPL(dmgRangedZwyklegoMoba());
+    else atak = fmtLiczbaPL(dmgMeleeZwyklegoMoba());
+    atakEl.textContent = atak;
+  }
   panel.classList.add("visible");
 }
 
@@ -2556,6 +2572,7 @@ function petlaGry(teraz) {
   if (typeof aktualizujKostura === "function") aktualizujKostura(dtMs);
   if (typeof aktualizujPistoletu === "function") aktualizujPistoletu(dtMs);
   if (typeof aktualizujShurikena === "function") aktualizujShurikena(dtMs);
+  if (typeof aktualizujPajaka === "function") aktualizujPajaka(dtMs);
 
   aktualizujWrogowZBlokowaniem(dtMs, czasWirtualny);
   rozsunWrogow(czasWirtualny);
@@ -2599,6 +2616,7 @@ function rozpocznijGre() {
   if (typeof resetujKostura === "function") resetujKostura();
   if (typeof resetujPistoletu === "function") resetujPistoletu();
   if (typeof resetujShurikena === "function") resetujShurikena();
+  if (typeof resetujPajaka === "function") resetujPajaka();
   if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();
