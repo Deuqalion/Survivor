@@ -19,6 +19,9 @@ const PAJAK_PROMIEN_TRAFIENIA_JADU = 10;
 /* Pająki (Tarantula i Ptasznik) */
 const PAJAK_PREDKOSC = 480;
 const PAJAK_PROMIEN_TRAFIENIA = 14;
+const PAJAK_ZWROTNOSC = 9;                 // rad/s: jak szybko Pająk skręca w stronę celu (płynny łuk)
+const PAJAK_ZWROTNOSC_BLISKO = 28;         // przy celu skręca ostrzej, żeby nie krążył wokół wroga
+const PAJAK_PROMIEN_STARTU = 14;           // Pająki wychodzą z krawędzi postaci
 
 /* Tarantula */
 const TARANTULA_CZAS_S = [2, 1.75, 1.5, 1.25, 1];
@@ -131,13 +134,18 @@ function wypuscPajaki(liczba, rodzaj, mnoznik, zrodlo) {
   const cele = znajdzNajblizszychWrogow(liczba, new Set());
   if (!cele.length) return false;
 
+  // Pająki "wychodzą" z postaci w losowym miejscu, zwrócone na zewnątrz; kilka Pająków na raz
+  // rozchodzi się w równych odstępach kąta (dla 2: po przeciwnych stronach), więc nie nakładają się.
+  const kat0 = Math.random() * Math.PI * 2;
   for (let i = 0; i < liczba; i++) {
     const cel = cele[i % cele.length];                  // brakuje osobnych celów: kilka Pająków na tego samego
-    const kat = Math.random() * Math.PI * 2;
+    const kat = kat0 + i * Math.PI * 2 / liczba;
     pociskiGracza.push({
       typ: "pajak", rodzaj, cel, mnoznik, zrodlo,
-      x: postac.x + Math.cos(kat) * 10, y: postac.y + Math.sin(kat) * 10,
-      dx: 1, dy: 0, t: Math.random() * 6
+      x: postac.x + Math.cos(kat) * PAJAK_PROMIEN_STARTU,
+      y: postac.y + Math.sin(kat) * PAJAK_PROMIEN_STARTU,
+      kier: kat, dx: Math.cos(kat), dy: Math.sin(kat),
+      t: Math.random() * 6
     });
   }
   return true;
@@ -305,20 +313,32 @@ function aktualizujPociskPajaka(p, dtMs, staty1) {
         if (!najblizszy) return false;
         p.cel = najblizszy;
       }
-      const dx = p.cel.x - p.x, dy = p.cel.y - p.y;
-      const d = Math.hypot(dx, dy) || 1;
-      p.dx = dx / d; p.dy = dy / d;
 
-      if (d <= promienWroga(p.cel) + PAJAK_PROMIEN_TRAFIENIA) {
-        const cel = p.cel;
-        const xT = cel.x, yT = cel.y;
-        if (p.rodzaj === "ptasznik") wybuchPtasznika(xT, yT, staty1, p.mnoznik);
-        else trafieniePajaka(cel, staty1, p.x, p.y, p.mnoznik, p.zrodlo);
-        return false;                                   // Pająk znika po ataku
+      // ruch w podkrokach: kierunek (p.kier) obraca się w stronę celu z ograniczoną prędkością kątową
+      const dystansRuchu = PAJAK_PREDKOSC * dtMs / 1000;
+      const kroki = Math.max(1, Math.ceil(dystansRuchu / 8));
+      for (let i = 0; i < kroki; i++) {
+        const dx = p.cel.x - p.x, dy = p.cel.y - p.y;
+        const d = Math.hypot(dx, dy) || 1;
+
+        if (d <= promienWroga(p.cel) + PAJAK_PROMIEN_TRAFIENIA) {
+          const cel = p.cel;
+          if (p.rodzaj === "ptasznik") wybuchPtasznika(cel.x, cel.y, staty1, p.mnoznik);
+          else trafieniePajaka(cel, staty1, p.x, p.y, p.mnoznik, p.zrodlo);
+          return false;                                 // Pająk znika po ataku
+        }
+
+        let roznica = Math.atan2(dy, dx) - p.kier;
+        while (roznica > Math.PI) roznica -= Math.PI * 2;
+        while (roznica < -Math.PI) roznica += Math.PI * 2;
+        const maxObrot = (d < 110 ? PAJAK_ZWROTNOSC_BLISKO : PAJAK_ZWROTNOSC) * (dtMs / 1000) / kroki;
+        p.kier += Math.max(-maxObrot, Math.min(maxObrot, roznica));
+
+        p.dx = Math.cos(p.kier);
+        p.dy = Math.sin(p.kier);
+        p.x += p.dx * dystansRuchu / kroki;
+        p.y += p.dy * dystansRuchu / kroki;
       }
-      const krok = Math.min(d, PAJAK_PREDKOSC * dtMs / 1000);
-      p.x += p.dx * krok;
-      p.y += p.dy * krok;
       return true;
     }
 
@@ -375,25 +395,34 @@ function rysujPajakaPostac(x, y, kat, skala, t, kol) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // 8 odnóży rozstawionych na boki (dwa ugięcia), poruszane naprzemiennie.
-  // Pozycje: [podstawa x, kolano x, stopa x] — przednie odnóża w przód, tylne w tył.
-  const nogi = [[3.0, 7.5, 11.5], [1.2, 6.0, 8.0], [-1.2, -5.5, -8.0], [-3.0, -7.5, -11.5]];
+  // 8 odnóży: 4 pary rozchylone wachlarzem (przednie w przód, tylne w tył), każda para pod innym kątem
+  // od osi poprzecznej, więc stopy są wyraźnie rozsunięte i odnóża się nie nakładają.
+  const pary = [
+    { hip: 2.6, kat: 66 * Math.PI / 180 },
+    { hip: 1.0, kat: 24 * Math.PI / 180 },
+    { hip: -1.0, kat: -24 * Math.PI / 180 },
+    { hip: -2.6, kat: -66 * Math.PI / 180 }
+  ];
   const rysujNogi = (szer, kolor) => {
     ctx.lineWidth = szer;
     ctx.strokeStyle = kolor;
-    nogi.forEach((n, i) => {
+    pary.forEach((n, i) => {
       for (const strona of [-1, 1]) {
-        const wymach = Math.sin(t * 22 + i * 1.6 + (strona > 0 ? Math.PI : 0)) * 1.8;
+        const wymach = Math.sin(t * 22 + i * 1.6 + (strona > 0 ? Math.PI : 0)) * 1.4;
+        const kolanoX = n.hip + Math.sin(n.kat) * 5.5;
+        const kolanoY = strona * (3 + Math.cos(n.kat) * 5.5);
+        const stopaX = n.hip + Math.sin(n.kat) * 13 + wymach;
+        const stopaY = strona * (3 + Math.cos(n.kat) * 14);
         ctx.beginPath();
-        ctx.moveTo(n[0] * 0.5, strona * 2);
-        ctx.lineTo(n[1], strona * 7.5);
-        ctx.lineTo(n[2] + wymach, strona * 12);
+        ctx.moveTo(n.hip * 0.6, strona * 2);
+        ctx.lineTo(kolanoX, kolanoY);
+        ctx.lineTo(stopaX, stopaY);
         ctx.stroke();
       }
     });
   };
-  rysujNogi(3.4, kol.obrys);          // ciemny kontur odnóży (kontrast)
-  rysujNogi(1.7, kol.nogi);
+  rysujNogi(2.9, kol.obrys);          // ciemny kontur odnóży (kontrast)
+  rysujNogi(1.4, kol.nogi);
 
   // krótkie ciało: duży, prawie okrągły odwłok + mały głowotułów
   const ciemnaObwodka = kol.obrys;

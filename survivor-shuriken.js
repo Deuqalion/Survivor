@@ -17,17 +17,18 @@ const SHURIKEN_PROMIEN_RYSOWANIA = 11;
 const SHURIKEN_PROMIEN_ZWYKLEGO = 14;      // zwykły atak jest nieco większy niż Lotos
 
 /* Ninjutsu */
-const NINJUTSU_EFEKTYWNOSC = 0.75;           // max poziom: 1
+const NINJUTSU_EFEKTYWNOSC = 0.5;            // max poziom: 0,75
+const NINJUTSU_EFEKTYWNOSC_MAX = 0.75;
 const NINJUTSU_KAT_ZAPASOWY_STOPNIE = 4;     // gdy brakuje osobnych celów: lekki rozrzut wokół celu głównego
 
 /* Ognisty shuriken */
 const OGNISTY_SHURIKEN_SZANSA = 25;
-const OGNISTY_SHURIKEN_MNOZNIKI = [40, 55, 70, 85, 100];   // % obrażeń trafienia (jak w opisie)
+const OGNISTY_SHURIKEN_MNOZNIKI = [15, 30, 45, 60, 75];   // % obrażeń trafienia (jak w opisie)
 const OGNISTY_SHURIKEN_PODPALENIE_BAZA = 0.05;             // jak Ogień Kostura: 5% + 1% za poziom maks. PŻ w 3s
 
 /* Rykoszet */
 const RYKOSZET_ZASIEG = PROMIEN_OGNIA * 2 * 2.5;           // 2,5x średnica obrażeń obszarowych = 550
-const RYKOSZET_EFEKTYWNOSC = [0.5, 0.6, 0.7, 0.8, 0.9];     // obrażenia (i siła efektów) odbicia względem trafienia
+const RYKOSZET_EFEKTYWNOSC = [0.5, 0.5, 0.5, 0.5, 0.5];     // obrażenia (i siła efektów) odbicia względem trafienia
 const RYKOSZET_WZROST_OBRAZEN = 0.15;                      // max poziom: +15% za każde odbicie
 
 /* Bumerang */
@@ -103,7 +104,7 @@ function atakShurikena(cel, staty1) {
   // Ninjutsu: (1 + p) dodatkowych zwykłych ataków, 75% skuteczności (max: 100%)
   const pNinjutsu = poziomUmiejetnosci("potrojna");
   if (pNinjutsu >= 0) {
-    const efektywnosc = pNinjutsu >= MAX_POZIOM_UMIEJETNOSCI ? 1 : NINJUTSU_EFEKTYWNOSC;
+    const efektywnosc = pNinjutsu >= MAX_POZIOM_UMIEJETNOSCI ? NINJUTSU_EFEKTYWNOSC_MAX : NINJUTSU_EFEKTYWNOSC;
     const liczba = 1 + pNinjutsu;
     const inneCele = znajdzNajblizszychWrogow(liczba, new Set([cel.id]));
 

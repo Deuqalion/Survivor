@@ -33,7 +33,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "odlamkowa", nazwa: "Ziemia", plik: "KOSTURY/ziemia.png", kol: 0, wiersz: 1,
     bonus: "Głaz ma 33% szansy na omdlenie.",
-    opis: p => `Co <span class="umiej-lvl">${10 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych wszystkim wrogom w obszarze.`
+    opis: p => `Co <span class="umiej-lvl">${11 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych wszystkim wrogom w obszarze.`
   },
   {
     id: "magiczna", nazwa: "Powietrze", plik: "KOSTURY/powietrze.png", kol: 1, wiersz: 1,
@@ -43,7 +43,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "potrojna", nazwa: "Woda", plik: "KOSTURY/woda.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na odepchnięcie wroga.",
-    opis: p => `Co <span class="umiej-lvl">${7 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "KOSTURY/wampir.png", kol: 1, wiersz: 2,
@@ -88,18 +88,18 @@ const UMIEJETNOSCI_PISTOLET = [
 const UMIEJETNOSCI_SHURIKEN = [
   {
     id: "potrojna", fizyczne: true, nazwa: "Ninjutsu", plik: "SHURIKENY/multi.png", kol: 0, wiersz: 0,
-    bonus: "Efektywność 100% obrażeń.",
-    opis: p => `Twój atak wyrzuca dodatkowe Shurikeny w ilości <span class="umiej-lvl">${1 + p}</span> zadając 75% obrażeń fizycznych.`
+    bonus: "Efektywność 75% obrażeń.",
+    opis: p => `Twój atak wyrzuca dodatkowe Shurikeny w ilości <span class="umiej-lvl">${1 + p}</span> zadając 50% obrażeń fizycznych.`
   },
   {
     id: "ognista", nazwa: "Ognisty shuriken", plik: "SHURIKENY/ognisty.png", kol: 1, wiersz: 0,
     bonus: "Obrażenia obszarowe podpalają.",
-    opis: p => `Trafienia mają 25% szansy na zadanie <span class="umiej-lvl">${[40, 55, 70, 85, 100][p]}%</span> obrażeń magicznych pobliskim wrogom.`
+    opis: p => `Trafienia mają 25% szansy na zadanie <span class="umiej-lvl">${[15, 30, 45, 60, 75][p]}%</span> obrażeń magicznych pobliskim wrogom.`
   },
   {
     id: "elektryczna", fizyczne: true, nazwa: "Rykoszet", plik: "SHURIKENY/rykoszet.png", kol: 0, wiersz: 1,
     bonus: "Każde odbicie: +15% obrażeń.",
-    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając <span class="umiej-lvl">${[50, 60, 70, 80, 90][p]}%</span> obrażeń całkowitych.`
+    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając <span class="umiej-lvl">50%</span> obrażeń całkowitych.`
   },
   {
     id: "magiczna", nazwa: "Bumerang", plik: "SHURIKENY/bumerang.png", kol: 1, wiersz: 1,
@@ -154,6 +154,11 @@ const UMIEJETNOSCI_PAJAK = [
   }
 ];
 
+/* Wspólny zabieg dla Księgi, Amunicji, Shuriken2 i Jada: jeden stały affix specjalny +
+   (Wartość ataku ALBO Obrażenia umiejętności) + (Prędkość ataku ALBO Szybkość zaklęcia). */
+const AMUNICJA_MOZLIWE = ["Wartość ataku", "Obrażenia umiejętności", "Prędkość ataku", "Szybkość zaklęcia"];
+const AMUNICJA_WYKLUCZAJACE = [["Wartość ataku", "Obrażenia umiejętności"], ["Prędkość ataku", "Szybkość zaklęcia"]];
+
 /* ---------- BRONIE ---------- */
 
 const BRONIE = {
@@ -171,7 +176,9 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "kostur.png", amunicja: "ksiega.png",
     umiejetnosci: UMIEJETNOSCI_KOSTUR,
-    affixyAmunicji: ["Obrażenia umiejętności", "Szybkość zaklęcia", "Czarnoksięstwo"],
+    affixyAmunicji: ["Czarnoksięstwo"],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
     zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 5 }, "Szybkość zaklęcia": { min: 0, max: 20 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
   },
@@ -180,8 +187,10 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 4500, max: 6000 } },
     bron: "pistolet.png", amunicja: "amunicja.png",
     umiejetnosci: UMIEJETNOSCI_PISTOLET,
-    affixyAmunicji: ["Wartość ataku", "Szybkość zaklęcia", "Destrukcja"],
-    zakresyAmunicji: {},
+    affixyAmunicji: ["Destrukcja"],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   shuriken: {
@@ -189,8 +198,10 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "shuriken.png", amunicja: "shuriken2.png",
     umiejetnosci: UMIEJETNOSCI_SHURIKEN,
-    affixyAmunicji: ["Szansa na otrucie", "Prędkość ataku", "Zręczność"],
-    zakresyAmunicji: { "Szansa na otrucie": { min: 1, max: 10 } },
+    affixyAmunicji: ["Zręczność"],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
+    zakresyAmunicji: { "Wartość ataku": { min: 60, max: 300 }, "Obrażenia umiejętności": { min: 0, max: 6 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   pajak: {
@@ -201,8 +212,8 @@ const BRONIE = {
     // Jad: stały unikalny affix "Jad" + po jednym z dwóch par (albo-albo): Wartość ataku / Obrażenia umiejętności,
     // Prędkość ataku / Szybkość zaklęcia
     affixyAmunicji: ["Jad"],
-    mozliweAmunicji: ["Wartość ataku", "Obrażenia umiejętności", "Prędkość ataku", "Szybkość zaklęcia"],
-    wykluczajaceAmunicji: [["Wartość ataku", "Obrażenia umiejętności"], ["Prędkość ataku", "Szybkość zaklęcia"]],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
     zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
   }

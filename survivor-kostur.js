@@ -31,7 +31,7 @@ const KOSTUR_SZANSA_WYBUCHU_ZWYKLEGO = 40;              // max poziom: zwykły a
 const KOSTUR_PODSTAWA_WYBUCHU_ZWYKLEGO = 700;           // (700 + zabici) * Obr. um.
 
 /* Ziemia */
-const KOSTUR_ZIEMIA_CZAS_BAZA_S = 10;                   // co (10 - poziom) s
+const KOSTUR_ZIEMIA_CZAS_BAZA_S = 11;                   // co (11 - poziom) s
 const KOSTUR_PREDKOSC_GLAZU = 650;
 const PROMIEN_WYBUCHU_ZIEMI = PROMIEN_OGNIA * 2;        // 2x zasięg obrażeń obszarowych
 const KOLOR_WYBUCHU_ZIEMI = "90, 200, 70";              // zielony
@@ -43,12 +43,12 @@ const KOSTUR_POWIETRZE_CZAS_MS = 8000;
 const KOSTUR_PREDKOSC_TORNADA = 260;
 const KOSTUR_PROMIEN_TORNADA = 36;
 const KOSTUR_ODSTEP_TORNAD_MS = 250;                    // kolejne tornada z jednej salwy startują co 0,25s
-const KOSTUR_TORNADO_OFFSET = 10;                       // losowe przesunięcie toru od środka areny (px)
+const KOSTUR_TORNADO_OFFSET = 50;                       // losowe przesunięcie toru od środka areny (px)
 const KOSTUR_SPOWOLNIENIE = 0.2;
 const KOSTUR_CZAS_SPOWOLNIENIA_MS = 3000;
 
 /* Woda */
-const KOSTUR_WODA_CZAS_BAZA_S = 7;                      // co (7 - poziom) s
+const KOSTUR_WODA_CZAS_BAZA_S = 8;                      // co (8 - poziom) s
 const KOSTUR_PREDKOSC_FALI = 520;
 const KOSTUR_POL_SZEROKOSCI_FALI = 40;                  // fala szeroka na 2 średnice postaci (2 * 40 px)
 const KOSTUR_SZANSA_ODEPCHNIECIA = 33;
