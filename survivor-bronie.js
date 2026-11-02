@@ -226,11 +226,14 @@ let aktualnaBron = "luk";
 let bronZatwierdzona = false;      // czy gracz wybrał broń na tę grę
 let wyborBroniOtwarty = false;
 let startPoWyborzeBroni = false;   // true: po wyborze od razu uruchom grę (START po porażce)
+let rozegranoGre = false;          // czy była już jakaś gra (po pierwszej porażce okno pokazuje podpisy pod kartami)
+let ostatniaGranaBron = null;      // klasa (broń) z ostatniej gry
 
 /* Podmienia grafiki itemów i zestaw umiejętności. */
 function zastosujBron(id) {
   const b = BRONIE[id];
   if (!b) return;
+  const poprzedniaBron = aktualnaBron;
   aktualnaBron = id;
 
   itemy[ITEM_BRON].obraz = b.bron;
@@ -247,7 +250,8 @@ function zastosujBron(id) {
   MAPA_ULEPSZEN_ITEMOW.strzala = b.ulepszenieAmunicji;
 
   // Zmiana broni: stare affixy amunicji z poprzedniej broni nie pasują do nowych — wyczyść
-  if (stan[1].wylosowane[ITEM_STRZALA]) {
+  // (ta sama broń: affixy zostają — "kontynuuj z odblokowanym ekwipunkiem")
+  if (poprzedniaBron !== id && stan[1].wylosowane[ITEM_STRZALA]) {
     delete stan[1].wylosowane[ITEM_STRZALA];
     delete stan[1].pierwotne[ITEM_STRZALA];
     obliczStatystyki(1);
@@ -286,6 +290,15 @@ function stylOkraglejIkony(u) {
          `background-position:${L / (100 - w) * 100}% ${T / (100 - h) * 100}%;`;
 }
 
+/* Podpis pod ikonami (tylko po pierwszej grze): ta sama klasa co ostatnio = kontynuacja z ekwipunkiem,
+   inna klasa = start od zera. */
+function podpisKarty(idBroni) {
+  if (!rozegranoGre) return "";
+  return idBroni === ostatniaGranaBron
+    ? `<div class="bron-podpis kontynuuj">Kontynuuj z odblokowanym ekwipunkiem.</div>`
+    : `<div class="bron-podpis">Zacznij od początku.</div>`;
+}
+
 function zbudujKartyBroni() {
   const kontener = document.getElementById("wybor-broni-karty");
   if (!kontener) return;
@@ -316,6 +329,7 @@ function zbudujKartyBroni() {
         <img src="${b.amunicja}" alt="${b.nazwaAmunicji}">
       </div>
       <div class="bron-ikony">${ikony}</div>
+      ${podpisKarty(k.bron)}
     </div>`;
   }).join("");
 
@@ -348,7 +362,10 @@ function zamknijWyborBroni() {
 
 function wybierzBron(id) {
   if (!BRONIE[id]) return;
+  const innaKlasa = rozegranoGre && id !== ostatniaGranaBron;
   zastosujBron(id);
+  // inna klasa niż ostatnio grana: ekwipunek (odblokowane itemy, affixy, zmianki) od zera
+  if (innaKlasa && typeof resetujEkwipunekOdPoczatku === "function") resetujEkwipunekOdPoczatku();
   bronZatwierdzona = true;
   zamknijWyborBroni();
 
@@ -368,6 +385,8 @@ function wymagajWyboruBroniPrzedStartem() {
 /* Hak z zakonczGre(): kolejny START zapyta o broń od nowa. */
 function resetujWyborBroni() {
   bronZatwierdzona = false;
+  rozegranoGre = true;
+  ostatniaGranaBron = aktualnaBron;
 }
 
 /* Klawisze 1-5 wybierają klasę (kartę), gdy okno jest otwarte. */

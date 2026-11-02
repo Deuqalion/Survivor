@@ -2345,6 +2345,29 @@ function rysujGre() {
   });
 
   pociski.forEach(p => {
+    if (p.typWroga === "arcyboss") {
+      // pociski Arcybossa: długi ogon (zanikający) z lekkim blurem
+      const dl = 46;
+      ctx.save();
+      ctx.lineCap = "round";
+      const g = ctx.createLinearGradient(p.x - p.dx * dl, p.y - p.dy * dl, p.x, p.y);
+      g.addColorStop(0, "rgba(255, 224, 102, 0)");
+      g.addColorStop(1, "rgba(255, 224, 102, 0.85)");
+      ctx.shadowColor = "#ffd34d";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.dx * dl, p.y - p.dy * dl);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = g;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffe066";
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
     ctx.beginPath();
     ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
     ctx.fillStyle = "#ffe066";
@@ -2788,6 +2811,27 @@ function ukryjEkranKoncowy() {
     overlay.setAttribute("aria-hidden", "true");
   }
   if (canvas) canvas.classList.remove("porazka-przygaszona");
+}
+
+/* Wybór INNEJ klasy niż ostatnio grana: ekwipunek jak na początku nowej rozgrywki
+   (odblokowane są tylko itemy startowe, startowe affixy, 0 zmianek). */
+function resetujEkwipunekOdPoczatku() {
+  liczbaZabitych = 0;
+  stan[1].wylosowane = {};
+  stan[1].pierwotne = {};
+  stan[1].ulepszeniaAffixy = {};
+  stan[1].bonusyAffixy = [];
+  ulepszoneItemySet.clear();
+  stan[1].odblokowaneItemy = new Set(ITEMY_START_AKTYWNE);
+  stan[1].zmianki = 0;
+
+  utworzItemy(1);
+  ITEMY_START_AKTYWNE.forEach(id => {
+    losujItem(1, id, false, iloscOdblokowanychAffixowDlaItemu(id), true);
+  });
+  obliczStatystyki(1);
+  aktualizujZmianki();
+  aktualizujInfo();
 }
 
 function zakonczGre(wygrana) {
