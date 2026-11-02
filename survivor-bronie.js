@@ -23,7 +23,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "elektryczna", nazwa: "Piorun", plik: "KOSTURY/piorun.png", kol: 0, wiersz: 0,
     bonus: "Pioruny są obszarowe.",
-    opis: p => `Atakujesz dodatkowe cele w ilości <span class="umiej-lvl">${1 + p}</span> zadając 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
+    opis: p => `Atakujesz dodatkowe cele:<span class="umiej-lvl">${1 + p}</span> za 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Ogień", plik: "KOSTURY/ogien.png", kol: 1, wiersz: 0,
@@ -262,25 +262,64 @@ function zastosujBron(id) {
 
 /* ---------- okno wyboru ---------- */
 
+/* Karty okna wyboru w kolejności wyświetlania: nazwa klasy -> broń (id z BRONIE).
+   bron: null = klasa jeszcze niedostępna (karta "Wkrótce"). */
+const KLASY_WYBORU = [
+  { klasa: "Łucznik", bron: "luk" },
+  { klasa: "Mag", bron: "kostur" },
+  { klasa: "Żołnierz", bron: "pistolet" },
+  { klasa: "Ninja", bron: "shuriken" },
+  { klasa: "Szaman", bron: "pajak" }
+];
+
+/* Styl samej OKRĄGŁEJ ikony umiejętności "wyciętej" z kafelka: ten sam fragment grafiki co duża
+   ikona w oknie umiejętności (UMIEJ_UKLAD_KAFLA.ikona), pokazany przez background-size/position
+   (ta sama matematyka co stylKola w survivor-umiejetnosci.js). */
+function stylOkraglejIkony(u) {
+  const { x: cx, y: cy, r } = UMIEJ_UKLAD_KAFLA.ikona;
+  const L = (cx - r) / UMIEJ_KAFEL_W * 100;
+  const T = (cy - r) / UMIEJ_KAFEL_H * 100;
+  const w = 2 * r / UMIEJ_KAFEL_W * 100;
+  const h = 2 * r / UMIEJ_KAFEL_H * 100;
+  return `background-image:url('${u.plik}');` +
+         `background-size:${100 / w * 100}% ${100 / h * 100}%;` +
+         `background-position:${L / (100 - w) * 100}% ${T / (100 - h) * 100}%;`;
+}
+
 function zbudujKartyBroni() {
   const kontener = document.getElementById("wybor-broni-karty");
   if (!kontener) return;
 
-  kontener.innerHTML = Object.entries(BRONIE).map(([id, b], i) => `
-    <div class="bron-karta${id === aktualnaBron && bronZatwierdzona ? " wybrana" : ""}" data-bron="${id}" tabindex="0">
+  kontener.innerHTML = KLASY_WYBORU.map((k, i) => {
+    const b = k.bron ? BRONIE[k.bron] : null;
+    if (!b) {
+      return `
+    <div class="bron-karta wkrotce">
       <div class="bron-klawisz">${i + 1}</div>
+      <div class="bron-nazwa">${k.klasa}</div>
+      <div class="bron-wkrotce">Wkrótce</div>
+    </div>`;
+    }
+
+    // ikony w układzie okna umiejętności: 2 kolumny x 3 wiersze (wierszami: kol 0,1 / 0,1 / 0,1)
+    const ikony = b.umiejetnosci.slice()
+      .sort((u1, u2) => u1.wiersz - u2.wiersz || u1.kol - u2.kol)
+      .map(u => `<div class="bron-ikona" title="${u.nazwa}" style="${stylOkraglejIkony(u)}"></div>`)
+      .join("");
+
+    return `
+    <div class="bron-karta${k.bron === aktualnaBron && bronZatwierdzona ? " wybrana" : ""}" data-bron="${k.bron}" tabindex="0">
+      <div class="bron-klawisz">${i + 1}</div>
+      <div class="bron-nazwa">${k.klasa}</div>
       <div class="bron-obrazy">
         <img src="${b.bron}" alt="${b.nazwa}">
         <img src="${b.amunicja}" alt="${b.nazwaAmunicji}">
       </div>
-      <div class="bron-nazwa">${b.nazwa}<span class="bron-plus"> + </span>${b.nazwaAmunicji}</div>
-      <ul class="bron-umiejetnosci">
-        ${b.umiejetnosci.map(u => `<li>${u.nazwa}</li>`).join("")}
-      </ul>
-    </div>
-  `).join("");
+      <div class="bron-ikony">${ikony}</div>
+    </div>`;
+  }).join("");
 
-  kontener.querySelectorAll(".bron-karta").forEach(karta => {
+  kontener.querySelectorAll(".bron-karta[data-bron]").forEach(karta => {
     karta.addEventListener("click", () => wybierzBron(karta.dataset.bron));
     karta.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.code === "Space") { e.preventDefault(); e.stopPropagation(); wybierzBron(karta.dataset.bron); }
@@ -331,12 +370,11 @@ function resetujWyborBroni() {
   bronZatwierdzona = false;
 }
 
-/* Klawisze 1-4 wybierają broń, gdy okno jest otwarte. */
+/* Klawisze 1-5 wybierają klasę (kartę), gdy okno jest otwarte. */
 document.addEventListener("keydown", event => {
   if (!wyborBroniOtwarty) return;
-  const idx = Number(event.key) - 1;
-  const ids = Object.keys(BRONIE);
-  if (idx >= 0 && idx < ids.length) wybierzBron(ids[idx]);
+  const klasa = KLASY_WYBORU[Number(event.key) - 1];
+  if (klasa && klasa.bron) wybierzBron(klasa.bron);
 });
 
 /* Start strony: okno wyboru broni (po wyborze gracz klika START). */

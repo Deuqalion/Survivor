@@ -28,7 +28,7 @@ const UMIEJ_WIERSZE_Y = [150, 648, 1146];
 const UMIEJ_UKLAD_KAFLA = {
   ikona: { x: 192, y: 205, r: 170 },                 // duża okrągła ikona
   nazwaBox: { x: 345, y: 6, w: 610, h: 56 },         // nazwa nad złotą tabliczką
-  tekst: { x: 345, y: 82, w: 625, h: 148 },          // pole opisu na tabliczce
+  tekst: { x: 340, y: 82, w: 630, h: 148 },          // pole opisu na tabliczce
   poziomy: [{ x: 433, y: 327 }, { x: 584, y: 327 }, { x: 733, y: 327 }, { x: 882, y: 327 }]
 };
 
