@@ -125,7 +125,7 @@ const UMIEJETNOSCI_PAJAK = [
   {
     id: "elektryczna", nazwa: "Tarantula", plik: "PAJĄKI/ptarantula.png", kol: 0, wiersz: 0,
     bonus: "Wypuszczasz 2 Pająki.",
-    opis: p => `Co <span class="umiej-lvl">${plLiczba([2, 1.75, 1.5, 1.25, 1][p])}</span> s wypuszczasz Pająka, który atakuje najbliższego wroga zadając <span class="umiej-dmg">${dmgMagiczne([1, 1.25, 1.5, 1.75, 2][p])}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${plLiczba([2, 1.75, 1.5, 1.25, 1][p])}</span> s wypuszczasz Pająka, który atakuje najbliższego wroga zadając <span class="umiej-dmg">${dmgMagiczne([0.7, 0.95, 1.2, 1.45, 1.7][p])}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Kwasowa chmura", plik: "PAJĄKI/pkwas.png", kol: 1, wiersz: 0,
@@ -135,7 +135,7 @@ const UMIEJETNOSCI_PAJAK = [
   {
     id: "odlamkowa", nazwa: "Ptasznik", plik: "PAJĄKI/pptasznik.png", kol: 0, wiersz: 1,
     bonus: "Obrażenia mogą krytować.",
-    opis: p => `Co <span class="umiej-lvl">${plLiczba([6, 5.25, 4.5, 3.75, 3][p])}</span> s wypuszczasz Pająka, który zadaje <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń obszarowych magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${plLiczba([6, 5.25, 4.5, 3.75, 3][p])}</span> s wypuszczasz Pająka, który zadaje <span class="umiej-dmg">${dmgMagiczne([1, 1.175, 1.35, 1.525, 1.7][p])}</span> obrażeń obszarowych magicznych.`
   },
   {
     id: "magiczna", nazwa: "Arachnofobia", plik: "PAJĄKI/parachnofobia.png", kol: 1, wiersz: 1,
@@ -145,7 +145,7 @@ const UMIEJETNOSCI_PAJAK = [
   {
     id: "potrojna", nazwa: "Pajęczyna", plik: "PAJĄKI/ppajeczyna.png", kol: 0, wiersz: 2,
     bonus: "Pajęczyna powoduje omdlenie.",
-    opis: p => `Co <span class="umiej-lvl">${12 - p}</span> s rzucasz pajęczyną przebijającą <span class="umiej-lvl">${1 + p}</span> wrogów zadając im <span class="umiej-dmg">${dmgMagiczne([1, 1.75, 2.5, 3.25, 4][p])}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${12 - p}</span> s rzucasz pajęczyną przebijającą <span class="umiej-lvl">${1 + 2 * p}</span> wrogów zadając im <span class="umiej-dmg">${dmgMagiczne([1, 1.75, 2.5, 3.25, 4][p])}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryczny pająk", plik: "PAJĄKI/pwampir.png", kol: 1, wiersz: 2,

@@ -128,7 +128,7 @@ const UMIEJETNOSCI_LUK = [
     fizyczne: true,
     plik: "potrojna.png",
     kol: 0, wiersz: 2,
-    bonus: "Nakłada efekty przy trafieniu.",
+    bonus: "Efektywność 100%, może porażać.",
     opis: p => `Wystrzeliwujesz 2 dodatkowe strzały, które zadają <span class="umiej-lvl">${20 + 20 * p}%</span> obrażeń fizycznych.`
   }
 ];

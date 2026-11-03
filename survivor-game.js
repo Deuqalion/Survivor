@@ -77,7 +77,7 @@ const OPOZNIENIE_MAGICZNEJ_MS = 130;                 // ułamek sekundy po ataku
 const PROMIEN_WYBUCHU_MAGICZNEJ = PROMIEN_OGNIA * 1.6; // 1,6x zasięg Ognistej strzały
 const PROMIEN_WYBUCHU_MAGICZNEJ_MAX = PROMIEN_OGNIA * 2.2; // 2,2x po maksymalnym poziomie umiejętności
 const MAX_POZIOM_UMIEJETNOSCI = 4;
-const MNOZNIK_EFEKTOW_POBOCZNYCH = 0.8; // Potrójna (max): efekty z bocznych strzał w 80% skuteczności
+const MNOZNIK_EFEKTOW_POBOCZNYCH = 1;   // Potrójna (max): efekty z bocznych strzał w 100% skuteczności
 // Elektryczna (max): każde ogniwo ma 25% szansy na +35% obrażeń ("krytyk" magiczny)
 const SZANSA_KRYTA_ELEKTRYCZNEJ = 25;
 const MNOZNIK_KRYTA_ELEKTRYCZNEJ = 1.35;
@@ -1682,7 +1682,7 @@ function wybuchMagicznejStrzaly(cel, staty1) {
   const x = cel.x;
   const y = cel.y;
   const promien = poziomUmiejetnosci("magiczna") >= MAX_POZIOM_UMIEJETNOSCI ? PROMIEN_WYBUCHU_MAGICZNEJ_MAX : PROMIEN_WYBUCHU_MAGICZNEJ;
-  dodajEfektWybuchu(x, y, promien, KOLOR_WYBUCHU_MAGICZNEJ);
+  dodajEfektWybuchu(x, y, promien, KOLOR_WYBUCHU_MAGICZNEJ, true);   // true = brokat i dym
 
   wrogowie.slice().forEach(wrog => {
     if (wrog.hp <= 0) return;
@@ -1852,7 +1852,11 @@ function trafienieStrzalaGracza(cel, staty1, pocisk) {
 
   sprobujObrazenObszarowych(cel, dmg, staty1);
   procAffixuOgnistejStrzaly(cel, dmg, staty1);
+  procElektrycznejStrzaly(cel, staty1);
+}
 
+/* Elektryczna strzała: 33% szansy na porażenie (1 + p) kolejnych celów (używa jej też Potrójna na max poziomie). */
+function procElektrycznejStrzaly(cel, staty1) {
   const pElektryczna = poziomUmiejetnosci("elektryczna");
   if (pElektryczna >= 0 && losujProcent() < SZANSA_PROCKA_STRZALY) {
     const mozeKrytowac = pElektryczna >= MAX_POZIOM_UMIEJETNOSCI;
@@ -1907,13 +1911,14 @@ function aktualizujPociskiGracza(dtMs) {
           pocisk.trafieni.add(wrog.id);
           if (pocisk.typ === "boczna") {
             const dmgBoczny = wykonajPojedynczyAtak(wrog, staty1, pocisk.x, pocisk.y, pocisk.mnoznikPrzebicia, { poboczny: true, mnoznikSkilla: pocisk.mnoznikSkilla });
-            // Max poziom Potrójnej: Ognista strzała (umiejętność i affix) w 80% skuteczności
+            // Max poziom Potrójnej: Ognista strzała (umiejętność i affix) i Elektryczna strzała w 100% skuteczności
             if (poziomUmiejetnosci("potrojna") >= MAX_POZIOM_UMIEJETNOSCI && dmgBoczny > 0) {
               const dmgEfektu = Math.round(dmgBoczny * MNOZNIK_EFEKTOW_POBOCZNYCH);
               if (wrog.hp > 0) {
                 sprobujObrazenObszarowych(wrog, dmgEfektu, staty1);
                 procAffixuOgnistejStrzaly(wrog, dmgEfektu, staty1);
               }
+              procElektrycznejStrzaly(wrog, staty1);   // boczne strzały mogą też porażać (jak strzała główna)
             }
           } else {
             trafienieStrzalaGracza(wrog, staty1, pocisk);
@@ -2208,8 +2213,8 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
       x2: x,
       y2: y,
       rgb: opcje.kolorLinii || KOLOR_LINII_ZWYKLEJ,
-      zycie: 120,
-      zycieMax: 120
+      zycie: opcje.kolorLinii === KOLOR_LINII_ELEKTRYCZNEJ ? 150 : 120,   // błyskawica Elektrycznej trwa dłużej
+      zycieMax: opcje.kolorLinii === KOLOR_LINII_ELEKTRYCZNEJ ? 150 : 120
     });
   }
 
@@ -2266,8 +2271,66 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
   }
 }
 
-function dodajEfektWybuchu(x, y, promien, rgb) {
-  efekty.push({
+/* Elektryczna strzała: zamiast prostej żółtej linii — drżąca, postrzępiona błyskawica z poświatą,
+   rozgałęzieniami i iskrami (kształt losowany co klatkę, więc "trzeszczy"). */
+function rysujBlyskawiceElektrycznej(e) {
+  const alpha = Math.max(0, e.zycie / e.zycieMax);
+  const dx = e.x2 - e.x1, dy = e.y2 - e.y1;
+  const dlugosc = Math.hypot(dx, dy) || 1;
+  const nx = -dy / dlugosc, ny = dx / dlugosc;            // wektor prostopadły
+  const segmenty = Math.max(3, Math.ceil(dlugosc / 16));
+
+  const zygzak = amplituda => {
+    const pkt = [{ x: e.x1, y: e.y1 }];
+    for (let i = 1; i < segmenty; i++) {
+      const t = i / segmenty;
+      const wychylenie = (Math.random() * 2 - 1) * amplituda;
+      pkt.push({ x: e.x1 + dx * t + nx * wychylenie, y: e.y1 + dy * t + ny * wychylenie });
+    }
+    pkt.push({ x: e.x2, y: e.y2 });
+    return pkt;
+  };
+  const rysujSciezke = pkt => {
+    ctx.beginPath();
+    pkt.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.stroke();
+  };
+
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  const glowna = zygzak(6);
+  // wąska złota poświata
+  ctx.shadowColor = `rgba(255, 215, 0, ${alpha})`;
+  ctx.shadowBlur = 7;
+  ctx.strokeStyle = `rgba(255, 205, 40, ${0.4 * alpha})`;
+  ctx.lineWidth = 2.6;
+  rysujSciezke(glowna);
+
+  // cienki biały rdzeń
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(255, 255, 235, ${alpha})`;
+  ctx.lineWidth = 1.1;
+  rysujSciezke(glowna);
+
+  // pojedyncze, krótkie odgałęzienia (rzadziej)
+  for (let i = 2; i < glowna.length - 1; i += 3) {
+    const p = glowna[i];
+    const kat = Math.atan2(dy, dx) + (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.8);
+    const dl = 5 + Math.random() * 6;
+    ctx.strokeStyle = `rgba(255, 240, 150, ${0.7 * alpha})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + Math.cos(kat) * dl, p.y + Math.sin(kat) * dl);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function dodajEfektWybuchu(x, y, promien, rgb, brokat) {
+  const efekt = {
     typ: "wybuch",
     x: x,
     y: y,
@@ -2275,7 +2338,26 @@ function dodajEfektWybuchu(x, y, promien, rgb) {
     rgb: rgb || KOLOR_WYBUCHU_OGNIA,
     zycie: CZAS_TRWANIA_WYBUCHU_MS,
     zycieMax: CZAS_TRWANIA_WYBUCHU_MS
-  });
+  };
+
+  if (brokat) {
+    // mieniący się brokat + kłęby dymu: cząstki losowane raz przy tworzeniu efektu
+    efekt.zycie = efekt.zycieMax = 800;
+    efekt.iskry = Array.from({ length: 34 }, () => ({
+      kat: Math.random() * Math.PI * 2,
+      dystans: 0.1 + Math.random() * 0.9,
+      rozmiar: 1.3 + Math.random() * 2.6,
+      faza: Math.random() * Math.PI * 2,
+      predkoscMigotu: 12 + Math.random() * 14,
+      kolor: ["255, 255, 255", "240, 190, 255", "200, 130, 255", "255, 220, 120"][Math.floor(Math.random() * 4)]
+    }));
+    efekt.dym = Array.from({ length: 7 }, () => ({
+      kat: Math.random() * Math.PI * 2,
+      dystans: Math.random() * 0.6,
+      promien: 0.22 + Math.random() * 0.2
+    }));
+  }
+  efekty.push(efekt);
 }
 
 function aktualizujEfekty(dtMs) {
@@ -2385,6 +2467,21 @@ function rysujGre() {
       const dlugoscOgona = 34;
       const px = -p.dy;
       const py = p.dx;
+
+      // długi, rozmyty "dym" za pociskiem: kilka coraz bledszych, rozszerzających się puf-ów
+      ctx.save();
+      for (let i = 1; i <= 7; i++) {
+        const t = i / 7;
+        const rr = r * (0.9 + t * 1.3);
+        ctx.beginPath();
+        ctx.arc(p.x - p.dx * (10 + i * 12), p.y - p.dy * (10 + i * 12), rr, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${i % 2 ? "170, 80, 255" : "215, 150, 255"}, ${0.22 * (1 - t)})`;
+        ctx.shadowColor = "rgba(190, 110, 255, 0.8)";
+        ctx.shadowBlur = 14;
+        ctx.fill();
+      }
+      ctx.restore();
+
       ctx.beginPath();
       ctx.moveTo(p.x - p.dx * dlugoscOgona, p.y - p.dy * dlugoscOgona);
       ctx.lineTo(p.x + px * r, p.y + py * r);
@@ -2394,8 +2491,12 @@ function rysujGre() {
       ctx.fill();
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.save();
+      ctx.shadowColor = "#c88bff";
+      ctx.shadowBlur = 14;
       ctx.fillStyle = "#b866ff";
       ctx.fill();
+      ctx.restore();
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = "#e6ccff";
       ctx.stroke();
@@ -2421,6 +2522,19 @@ function rysujGre() {
     const dlugoscStrzaly = 22;
     const xTyl = p.x - p.dx * dlugoscStrzaly;
     const yTyl = p.y - p.dy * dlugoscStrzaly;
+
+    // blur (smuga) za strzałą: główna — jasnozłota, Potrójna (boczna) — zielona
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.shadowColor = p.typ === "boczna" ? "#6fdc4a" : "#fff0a8";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(p.x - p.dx * 40, p.y - p.dy * 40);
+    ctx.lineTo(p.x, p.y);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = p.typ === "boczna" ? "rgba(110, 220, 75, 0.32)" : "rgba(255, 240, 160, 0.32)";
+    ctx.stroke();
+    ctx.restore();
 
     ctx.beginPath();
     ctx.moveTo(xTyl, yTyl);
@@ -2449,8 +2563,49 @@ function rysujGre() {
       ctx.lineWidth = 2;
       ctx.strokeStyle = `rgba(${e.rgb || KOLOR_WYBUCHU_OGNIA}, ${0.9 * alpha})`;
       ctx.stroke();
+
+      if (e.iskry) {
+        // dym: miękkie, rozszerzające się kłęby
+        const rozwoj = 1 - postep;                         // 0 -> 1
+        e.dym.forEach(d => {
+          const dx = e.x + Math.cos(d.kat) * d.dystans * e.promien * (0.4 + rozwoj);
+          const dy = e.y + Math.sin(d.kat) * d.dystans * e.promien * (0.4 + rozwoj);
+          const rr = e.promien * d.promien * (0.5 + rozwoj);
+          const g = ctx.createRadialGradient(dx, dy, 0, dx, dy, rr);
+          g.addColorStop(0, `rgba(${e.rgb}, ${0.22 * alpha})`);
+          g.addColorStop(1, `rgba(${e.rgb}, 0)`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(dx, dy, rr, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // brokat: migoczące iskierki, które rozlatują się i powoli opadają
+        const czas = (e.zycieMax - e.zycie) / 1000;
+        e.iskry.forEach(s => {
+          const odl = e.promien * s.dystans * (0.35 + 0.65 * rozwoj);
+          const sx = e.x + Math.cos(s.kat) * odl;
+          const sy = e.y + Math.sin(s.kat) * odl + czas * 14;   // lekkie opadanie
+          const migot = 0.35 + 0.65 * Math.abs(Math.sin(czas * s.predkoscMigotu + s.faza));
+          const a = alpha * migot;
+          ctx.fillStyle = `rgba(${s.kolor}, ${a})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, s.rozmiar * migot, 0, Math.PI * 2);
+          ctx.fill();
+          if (s.rozmiar > 2.6) {                                  // większe iskierki mają krzyżyk połysku
+            ctx.strokeStyle = `rgba(255, 255, 255, ${a * 0.8})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(sx - s.rozmiar * 2, sy); ctx.lineTo(sx + s.rozmiar * 2, sy);
+            ctx.moveTo(sx, sy - s.rozmiar * 2); ctx.lineTo(sx, sy + s.rozmiar * 2);
+            ctx.stroke();
+          }
+        });
+      }
     } else if (e.typ === "piorun") {
       rysujPiorun(e);
+    } else if (e.typ === "linia" && e.rgb === KOLOR_LINII_ELEKTRYCZNEJ) {
+      rysujBlyskawiceElektrycznej(e);
     } else if (e.typ === "linia") {
       ctx.beginPath();
       ctx.moveTo(e.x1, e.y1);

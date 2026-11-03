@@ -25,7 +25,7 @@ const PAJAK_PROMIEN_STARTU = 14;           // Pająki wychodzą z krawędzi post
 
 /* Tarantula */
 const TARANTULA_CZAS_S = [2, 1.75, 1.5, 1.25, 1];
-const TARANTULA_MNOZNIK = [1, 1.25, 1.5, 1.75, 2];
+const TARANTULA_MNOZNIK = [0.7, 0.95, 1.2, 1.45, 1.7];
 
 /* Kwasowa chmura */
 const KWAS_CZAS_S = 10;
@@ -39,7 +39,7 @@ const KOLOR_WYBUCHU_KWASU = "160, 80, 230";          // fiolet
 
 /* Ptasznik */
 const PTASZNIK_CZAS_S = [6, 5.25, 4.5, 3.75, 3];
-const PTASZNIK_MNOZNIK = 1;
+const PTASZNIK_MNOZNIK = [1, 1.175, 1.35, 1.525, 1.7];
 const PTASZNIK_PROMIEN = PROMIEN_OGNIA;
 const PTASZNIK_MNOZNIK_KRYTU = 1.5;                 // max poziom: obrażenia mogą krytować (szansa = Szansa na kryta)
 const KOLOR_WYBUCHU_PTASZNIKA = "230, 70, 50";       // czerwień (jak Pająki Ptasznika)
@@ -218,7 +218,7 @@ function wystrzelPajeczyne() {
   const p = Math.max(0, poziomUmiejetnosci("potrojna"));
   pociskiGracza.push({
     typ: "pajeczyna", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d,
-    trafieni: new Set(), zostalo: 1 + p, kat: 0     // przebija 1/2/3/4/5 wrogów
+    trafieni: new Set(), zostalo: 1 + 2 * p, kat: 0     // przebija 1/3/5/7/9 wrogów
   });
   return true;
 }
@@ -269,7 +269,7 @@ function aktualizujPajaka(dtMs) {
   else {
     pajakPtasznikMs -= dtMs;
     if (pajakPtasznikMs <= 0) {
-      if (wypuscPajaki(wzmocnieniaPajakow().mnoznikLiczby, "ptasznik", PTASZNIK_MNOZNIK, "odlamkowa")) pajakPtasznikMs = czasUmiejetnosciMs(PTASZNIK_CZAS_S[pPtasz]);
+      if (wypuscPajaki(wzmocnieniaPajakow().mnoznikLiczby, "ptasznik", PTASZNIK_MNOZNIK[pPtasz], "odlamkowa")) pajakPtasznikMs = czasUmiejetnosciMs(PTASZNIK_CZAS_S[pPtasz]);
     }
   }
 
