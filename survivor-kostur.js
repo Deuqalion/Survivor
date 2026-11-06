@@ -15,7 +15,7 @@
 const KOSTUR_PREDKOSC_KOLA = 700;
 const KOSTUR_PROMIEN_KOLA = 11;
 const KOSTUR_PROMIEN_TRAFIENIA_KOLA = 12;
-const KOSTUR_EFEKTYWNOSC_DODATKOWYCH = 0.5;   // dodatkowe ataki z Pioruna: 50% obrażeń fizycznych i siły efektów (np. krwawienia)
+const KOSTUR_EFEKTYWNOSC_DODATKOWYCH = 0.33;  // dodatkowe ataki z Pioruna: 33% obrażeń fizycznych i siły efektów (np. krwawienia)
 
 /* Piorun */
 const KOSTUR_SZANSA_PIORUNA = 33;
@@ -31,6 +31,7 @@ const KOSTUR_SZANSA_WYBUCHU_ZWYKLEGO = 40;              // max poziom: zwykły a
 const KOSTUR_PODSTAWA_WYBUCHU_ZWYKLEGO = 700;           // (700 + zabici) * Obr. um.
 
 /* Ziemia */
+const KOSTUR_MNOZNIK_ZIEMI_WODY = [1, 1.15, 1.3, 1.45, 1.6];   // obrażenia Ziemi i Wody wg poziomu
 const KOSTUR_ZIEMIA_CZAS_BAZA_S = 11;                   // co (11 - poziom) s
 const KOSTUR_PREDKOSC_GLAZU = 650;
 const PROMIEN_WYBUCHU_ZIEMI = PROMIEN_OGNIA * 2;        // 2x zasięg obrażeń obszarowych
@@ -232,13 +233,33 @@ function procWybuchuZwyklegoAtaku(cel, staty1) {
 
 /* ---------- ZIEMIA: głaz z dużym zielonym wybuchem ---------- */
 
+/* Środek największego skupiska wrogów (w promieniu wybuchu Ziemi) — tak samo celuje Kwasowa chmura Pająka. */
+function znajdzSkupiskoDlaZiemi() {
+  let najlepsze = null, najwiecej = 0, najblizej = Infinity;
+  for (const w of wrogowie) {
+    if (w.hp <= 0) continue;
+    let n = 0, sx = 0, sy = 0;
+    for (const o of wrogowie) {
+      if (o.hp <= 0) continue;
+      if (Math.hypot(w.x - o.x, w.y - o.y) <= PROMIEN_WYBUCHU_ZIEMI) { n++; sx += o.x; sy += o.y; }
+    }
+    const d = Math.hypot(postac.x - w.x, postac.y - w.y);
+    if (n > najwiecej || (n === najwiecej && d < najblizej)) {
+      najlepsze = { x: sx / n, y: sy / n };
+      najwiecej = n;
+      najblizej = d;
+    }
+  }
+  return najlepsze;
+}
+
 function wystrzelGlaz() {
-  const cel = znajdzNajblizszegoWroga();
+  const cel = znajdzSkupiskoDlaZiemi();
   if (!cel) return false;
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
   const d = Math.hypot(dx, dy) || 1;
-  pociskiGracza.push({ typ: "ziemia", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d });
+  pociskiGracza.push({ typ: "ziemia", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d, cx: cel.x, cy: cel.y });
   return true;
 }
 
@@ -253,7 +274,7 @@ function wybuchZiemi(x, y, staty1) {
 
   wrogowie.slice().forEach(w => {
     if (w.hp <= 0 || Math.hypot(x - w.x, y - w.y) > PROMIEN_WYBUCHU_ZIEMI) return;
-    atakUmiejetnosciKostura(w, staty1, x, y, 1, "odlamkowa");
+    atakUmiejetnosciKostura(w, staty1, x, y, KOSTUR_MNOZNIK_ZIEMI_WODY[Math.max(0, poziomUmiejetnosci("odlamkowa"))], "odlamkowa");
 
     if (omdlenie && w.hp > 0 && w.typ !== "arcyboss") {
       w.ogluszonyDoCzasu = czasWirt() + CZAS_OGLUSZENIA_MS;
@@ -465,13 +486,19 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
         return false;
       });
 
-    case "ziemia":
-      return ruchZPodkrokami(p, KOSTUR_PREDKOSC_GLAZU, dtMs, pk => {
-        const w = pierwszyWrogWZasiegu(pk, 20);
-        if (!w) return false;
-        wybuchZiemi(w.x, w.y, staty1);
-        return true;
-      });
+    case "ziemia": {
+      // głaz leci w środek skupiska i tam wybucha (nie zatrzymuje się na wrogach po drodze)
+      const dx = p.cx - p.x, dy = p.cy - p.y;
+      const d = Math.hypot(dx, dy);
+      const krok = KOSTUR_PREDKOSC_GLAZU * dtMs / 1000;
+      if (d <= krok) {
+        wybuchZiemi(p.cx, p.cy, staty1);
+        return false;
+      }
+      p.x += (dx / d) * krok;
+      p.y += (dy / d) * krok;
+      return true;
+    }
 
     case "fala": {
       const pWoda = poziomUmiejetnosci("potrojna");
@@ -486,7 +513,7 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
           if (Math.hypot(rx, ry) > KOSTUR_POL_SZEROKOSCI_FALI + r * 0.5) continue;
 
           pk.trafieni.add(w.id);
-          atakUmiejetnosciKostura(w, staty1, pk.x, pk.y, 1, "potrojna");
+          atakUmiejetnosciKostura(w, staty1, pk.x, pk.y, KOSTUR_MNOZNIK_ZIEMI_WODY[Math.max(0, pWoda)], "potrojna");
           if (pWoda >= MAX_POZIOM_UMIEJETNOSCI && w.hp > 0 && losujProcent() < KOSTUR_SZANSA_ODEPCHNIECIA) {
             odepchnijWroga(w, pk.dx, pk.dy, KOSTUR_DYSTANS_ODEPCHNIECIA);
           }

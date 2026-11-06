@@ -23,7 +23,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "elektryczna", nazwa: "Piorun", plik: "KOSTURY/piorun.png", kol: 0, wiersz: 0,
     bonus: "Pioruny są obszarowe.",
-    opis: p => `Atakujesz dodatkowe cele:<span class="umiej-lvl">${1 + p}</span> za 50% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
+    opis: p => `Atakujesz dodatkowe cele:<span class="umiej-lvl">${1 + p}</span> za 33% obrażeń. 33% szansy na porażenie za <span class="umiej-dmg">${dmgMagiczne(0.8 + 0.05 * p)}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Ogień", plik: "KOSTURY/ogien.png", kol: 1, wiersz: 0,
@@ -33,7 +33,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "odlamkowa", nazwa: "Ziemia", plik: "KOSTURY/ziemia.png", kol: 0, wiersz: 1,
     bonus: "Głaz ma 33% szansy na omdlenie.",
-    opis: p => `Co <span class="umiej-lvl">${11 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych wszystkim wrogom w obszarze.`
+    opis: p => `Co <span class="umiej-lvl">${11 - p}</span> sekund rzucasz głazem zadając <span class="umiej-dmg">${dmgMagiczne([1, 1.15, 1.3, 1.45, 1.6][p])}</span> obrażeń magicznych wszystkim wrogom w obszarze.`
   },
   {
     id: "magiczna", nazwa: "Powietrze", plik: "KOSTURY/powietrze.png", kol: 1, wiersz: 1,
@@ -43,7 +43,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "potrojna", nazwa: "Woda", plik: "KOSTURY/woda.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na odepchnięcie wroga.",
-    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne([1, 1.15, 1.3, 1.45, 1.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "KOSTURY/wampir.png", kol: 1, wiersz: 2,
@@ -179,8 +179,8 @@ const BRONIE = {
     affixyAmunicji: ["Czarnoksięstwo"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 5 }, "Szybkość zaklęcia": { min: 0, max: 20 } },
-    ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 6 } },
+    ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   pistolet: {
     nazwa: "Pistolet", nazwaAmunicji: "Amunicja", ikona: "🔫",
@@ -215,7 +215,7 @@ const BRONIE = {
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
     zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
-    ulepszenieAmunicji: "Szybkość zaklęcia: +25%"
+    ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   }
 };
 

@@ -269,3 +269,29 @@
   25% { transform: translateX(-6px); }
   75% { transform: translateX(6px); }
 }
+
+/* ---------- komunikat (np. "Musisz posiadać 3 odblokowane umiejętności") ---------- */
+
+.umiej-komunikat {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 10;
+  padding: 1.2cqw 2.6cqw;
+  border-radius: 1cqw;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffd700;
+  font-size: 3cqw;
+  font-weight: bold;
+  white-space: nowrap;
+  text-shadow: 0 0 1cqw rgba(255, 215, 0, 0.9), 0 0 2.2cqw rgba(255, 170, 0, 0.7), 2px 3px 4px #000;
+  pointer-events: none;
+  animation: umiejKomunikat 3s ease-out forwards;
+}
+
+@keyframes umiejKomunikat {
+  0%   { opacity: 0; transform: translate(-50%, 0); }
+  8%   { opacity: 1; transform: translate(-50%, -0.6cqw); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -9cqw); }
+}

@@ -40,6 +40,7 @@ const ARCYBOSS_POCISKI_MAX = 24;
 
 const UPG_BRON_OBR_UMIEJETNOSCI = 6;  // ulepszenie broni: +6% Obrażeń umiejętności
 const ARCYBOSSY_DO_ULEPSZENIA = 4;
+const ARCYBOSSY_DO_SZYBSZEGO_SPAWNU = 7;   // po 7. pokonanym Arcybossie skok do szybszego spawnu
 const PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU = 200;
 const MNOZNIK_CZASU_SPAWNU_PO_ULEPSZENIU = 0.5;
 const ARCYBOSS_ROZRZUT_KATA_STOPNIE = 5;
@@ -223,7 +224,7 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Ulepszenie broni") { obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
-      else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +25%") szybkoscZaklecia += val;
+      else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +17%") szybkoscZaklecia += val;
       else if (nazwa === "Jad") { otrucie += val; wzmocnienieTrucizny += val; }   // Jad: pasywka = +x pp Szansy na otrucie i Wzmocnienia trucizny
       else if (nazwa === "Destrukcja") { wzmocnienieKrytyczne += val; wzmocnienieTrucizny += val; }   // Amunicja: pasywka = +x pp do obu wzmocnień
       else if (nazwa === "Czarnoksięstwo") { obrazeniaUmiejetnosci += val; szybkoscZaklecia += val; }   // Księga: pasywka = +x pp Obrażeń umiejętności i Szybkości zaklęcia
@@ -439,13 +440,45 @@ function wykonajUlepszenieItemu(itemId) {
   utworzItemy(1);
 
   document.getElementById("wybor-ulepszenia-overlay").classList.remove("visible");
-  oczekiwanieNaUlepszenieItemu = false;
-  graTrwa = true;
-  // Tak jak przy przelaczPauze() — bez tego pierwsza klatka po zamknięciu
-  // okna liczy dtMs jako cały czas spędzony na wyborze ulepszenia, więc
-  // wrogowie/pociski skaczą o kilka sekund ruchu w jednej klatce.
-  ostatniCzas = 0;
-  requestAnimationFrame(petlaGry);
+  wznowGrePoOdliczaniu();
+}
+
+/* Po zamknięciu okna ulepszenia (i okna bonusu) gra wraca dopiero po odliczaniu 3-2-1
+   (ta sama czcionka co napis "Nowy item!"). Do końca odliczania blokada pauzy/wiki/umiejętności
+   zostaje włączona, a gra stoi. */
+let odliczanieTrwa = false;
+
+function wznowGrePoOdliczaniu() {
+  odliczanieTrwa = true;
+  oczekiwanieNaUlepszenieItemu = true;
+  graTrwa = false;
+
+  const wrap = document.querySelector(".survivor-canvas-wrap");
+  let liczba = 3;
+
+  const tik = () => {
+    if (liczba <= 0) {
+      odliczanieTrwa = false;
+      oczekiwanieNaUlepszenieItemu = false;
+      graTrwa = true;
+      // Tak jak przy przelaczPauze() — bez tego pierwsza klatka po wznowieniu liczy dtMs
+      // jako cały czas postoju, więc wrogowie/pociski skaczą o kilka sekund ruchu naraz.
+      ostatniCzas = 0;
+      requestAnimationFrame(petlaGry);
+      pokazZaleglaOgloszenia();
+      return;
+    }
+    if (wrap) {
+      const el = document.createElement("div");
+      el.className = "ogloszenie ogloszenie-item ogloszenie-odliczanie";
+      el.textContent = String(liczba);
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), CZAS_OGLOSZENIA_MS);
+    }
+    liczba -= 1;
+    setTimeout(tik, 1000);
+  };
+  tik();
 }
 
 /* ============================================================
@@ -502,10 +535,7 @@ function wybierzBonus(affixyKarty) {
   obliczStatystyki(1);
 
   document.getElementById("wybor-bonusu-overlay").classList.remove("visible");
-  oczekiwanieNaUlepszenieItemu = false;
-  graTrwa = true;
-  ostatniCzas = 0; // jak przy zamknięciu okna ulepszenia — bez skoku czasu w pierwszej klatce
-  requestAnimationFrame(petlaGry);
+  wznowGrePoOdliczaniu();
 }
 
 /* ============================================================ */
@@ -634,7 +664,9 @@ function czasSpawnuMs() {
   // Do 3 pokonanych Arcybossów: stałe 1800 ms. Od 4. działa wzór
   // 1800 / (1 + sqrt(x / 4)), gdzie x = liczba pokonanych Arcybossów
   // (x=4 -> 900 ms, x=5 -> ~849,85 ms, ...).
+  // Od 7. Arcybossa: 1800 / (1 + sqrt(x * 0.7)) (x=7 -> ok. 560 ms).
   const x = Math.max(arcybossyPokonane, rekordArcybossowDlaSpawnu);
+  if (x >= ARCYBOSSY_DO_SZYBSZEGO_SPAWNU) return CZAS_SPAWNU_MS / (1 + Math.sqrt(x * 0.7));
   return x >= ARCYBOSSY_DO_ULEPSZENIA
     ? CZAS_SPAWNU_MS / (1 + Math.sqrt(x / 4))
     : CZAS_SPAWNU_MS;
@@ -745,9 +777,19 @@ const CZAS_OGLOSZENIA_MS = 1000;
 const kolejkaOgloszen = [];
 let ogloszenieTrwa = false;
 
-function pokazOgloszenie(tekst, klasa) {
-  kolejkaOgloszen.push({ tekst, klasa });
+function pokazOgloszenie(tekst, klasa, czasMs) {
+  kolejkaOgloszen.push({ tekst, klasa, czasMs: czasMs || CZAS_OGLOSZENIA_MS });
   if (!ogloszenieTrwa) pokazNastepneOgloszenie();
+}
+
+/* Ogłoszenia, które mają pojawić się dopiero po zamknięciu okna ulepszenia i odliczaniu
+   (inaczej schowałyby się pod oknem). */
+const zaleglaOgloszenia = [];
+function pokazZaleglaOgloszenia() {
+  while (zaleglaOgloszenia.length) {
+    const o = zaleglaOgloszenia.shift();
+    pokazOgloszenie(o.tekst, o.klasa, o.czasMs);
+  }
 }
 
 function pokazNastepneOgloszenie() {
@@ -763,12 +805,13 @@ function pokazNastepneOgloszenie() {
   const el = document.createElement("div");
   el.className = `ogloszenie ${o.klasa}`;
   el.textContent = o.tekst;
+  if (o.czasMs !== CZAS_OGLOSZENIA_MS) el.style.animationDuration = `${o.czasMs}ms`;
   wrap.appendChild(el);
 
   setTimeout(() => {
     el.remove();
     pokazNastepneOgloszenie();
-  }, CZAS_OGLOSZENIA_MS);
+  }, o.czasMs);
 }
 
 const klawisze = { w: false, a: false, s: false, d: false };
@@ -1963,9 +2006,16 @@ function zabijWroga(wrog) {
     if (arcybossyPokonane === ARCYBOSSY_DO_ULEPSZENIA) {
       nastepnyProgArcybossa += PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU - PROG_FALI_ARCYBOSSA;
       log("⚡ Wrogowie respią się coraz szybciej, a ARCYBOSSY co 200 zabójstw!", "log-zwyciestwo");
+      zaleglaOgloszenia.push({ tekst: "Wrogowie pojawiają się szybciej!", klasa: "ogloszenie-item ogloszenie-dlugie", czasMs: 2200 });
+    }
+    if (arcybossyPokonane === ARCYBOSSY_DO_SZYBSZEGO_SPAWNU) {
+      log("⚡ Wrogowie respią się jeszcze szybciej!", "log-zwyciestwo");
+      zaleglaOgloszenia.push({ tekst: "Wrogowie pojawiają się szybciej!", klasa: "ogloszenie-item ogloszenie-dlugie", czasMs: 2200 });
     }
 
-    sprawdzWywołanieUlepszenia();
+    // Kilku ARCYBOSSÓW naraz: okno ulepszenia dopiero po zabiciu WSZYSTKICH (raz, nie po każdym)
+    if (!wrogowie.some(w => w.typ === "arcyboss")) sprawdzWywołanieUlepszenia();
+    if (!oczekiwanieNaUlepszenieItemu) pokazZaleglaOgloszenia();
   }
 
   const jestBossowy = wrog.typ === "boss" || wrog.typ === "arcyboss";
@@ -3056,7 +3106,7 @@ function wypelnijWiki() { const grid = document.getElementById("wiki-grid"); if 
 */
 let wikiZatrzymalaGre = false;
 
-function otworzWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; if (wikiOtwarta) return;
+function otworzWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; if (wikiOtwarta || odliczanieTrwa) return;
   if (graTrwa && !oczekiwanieNaUlepszenieItemu) { graTrwa = false; ustawPrzyciski("pauza"); wikiZatrzymalaGre = true; }
   wypelnijWiki(); wyczyscPodswietlenieWiki(); overlay.classList.add("visible"); overlay.setAttribute("aria-hidden", "false"); wikiOtwarta = true; document.body.classList.add("wiki-aktywna"); }
 function zamknijWiki() { const overlay = document.getElementById("wiki-overlay"); if (!overlay) return; overlay.classList.remove("visible"); overlay.setAttribute("aria-hidden", "true"); wikiOtwarta = false; document.body.classList.remove("wiki-aktywna");

@@ -164,7 +164,7 @@ const itemy = {
       "Szansa na przeszywkę",
       "Szansa na omdlenie",
       "Szansa na otrucie",
-      "Kradzież życia"
+      "Szybkość zaklęcia"
     ]
   },
   11: {
@@ -224,7 +224,7 @@ const affixy = [
   { nazwa: "Wzmocnienie krwawienia", min: 0, max: 5, suffix: "%" },
   { nazwa: "Wzmocnienie krytyczne", min: 0, max: 15, suffix: "%" },
   { nazwa: "Prędkość ataku", min: 0, max: 35, suffix: "%" },
-  { nazwa: "Szybkość zaklęcia", min: 0, max: 25, suffix: "%" },   // skraca czas oczekiwania na umiejętności liczone w sekundach
+  { nazwa: "Szybkość zaklęcia", min: 0, max: 17, suffix: "%" },   // skraca czas oczekiwania na umiejętności liczone w sekundach
   
   // Affixy ulepszeń
   { nazwa: "Obrażenia umiejętności: +10%", min: 10, max: 10, suffix: "%", ulepszenie: true },
@@ -233,7 +233,7 @@ const affixy = [
   { nazwa: "Wskrzeszenie", min: 1, max: 1, suffix: "", pasywka: true, ulepszenie: true, opis: "Może być użyte raz na grę. Po śmiertelnych obrażeniach unieruchamia wrogów na 3s, przywraca 75% PŻ i daje odporność." },
   { nazwa: "Dodatkowe PŻ: 4000", min: 4000, max: 4000, suffix: "", ulepszenie: true },
   { nazwa: "Prędkość ataku: +35%", min: 35, max: 35, suffix: "%", ulepszenie: true },
-  { nazwa: "Szybkość zaklęcia: +25%", min: 25, max: 25, suffix: "%", ulepszenie: true },
+  { nazwa: "Szybkość zaklęcia: +17%", min: 17, max: 17, suffix: "%", ulepszenie: true },
   { nazwa: "Pancerz: 35", min: 35, max: 35, suffix: "", ulepszenie: true },
   { nazwa: "Szansa na kryta: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na przeszywkę: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
@@ -246,7 +246,7 @@ const affixy = [
   // Pasywki przedmiotów amunicji (działają jak "Zwykła strzała", tylko dodają inną statystykę;
   // nazwa jest tylko etykietą — patrz obliczStatystyki w survivor-game.js)
   {
-    nazwa: "Czarnoksięstwo", min: 0, max: 5, suffix: "%", pasywka: true,
+    nazwa: "Czarnoksięstwo", min: 0, max: 6, suffix: "%", pasywka: true,
     opis: "Dodaje {x} Obrażeń umiejętności i Szybkości zaklęcia."
   },
   {

@@ -342,6 +342,26 @@ function potrzasnij(el) {
   el.classList.add("brak");
 }
 
+const WYMAGANE_UMIEJETNOSCI_DO_MAXA = 3;
+
+function liczbaOdblokowanychUmiejetnosci() {
+  return UMIEJETNOSCI.filter(u => umiejetnosciStan[u.id] && umiejetnosciStan[u.id].odblokowana).length;
+}
+
+/* Gruby napis z glow na przyciemnionym tle, unoszący się do góry (3 s). */
+function pokazKomunikatUmiejetnosci(tekst) {
+  const okno = document.getElementById("umiejetnosci-okno");
+  if (!okno) return;
+  const stary = okno.querySelector(".umiej-komunikat");
+  if (stary) stary.remove();
+
+  const el = document.createElement("div");
+  el.className = "umiej-komunikat";
+  el.textContent = tekst;
+  okno.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
 function obsluzKlikUmiejetnosci(event) {
   const cel = event.target.closest("[data-umiej]");
   if (!cel) return;
@@ -362,6 +382,12 @@ function obsluzKlikUmiejetnosci(event) {
     const i = Number(cel.dataset.poziom);
     if (i !== s.poziom) return;
     if (!s.odblokowana) { potrzasnij(document.getElementById(`umiej-ikona-${u.id}`)); return; }
+    // Ulepszenie na max (IV) wymaga 3 odblokowanych umiejętności
+    if (s.poziom === 3 && liczbaOdblokowanychUmiejetnosci() < WYMAGANE_UMIEJETNOSCI_DO_MAXA) {
+      potrzasnij(cel);
+      pokazKomunikatUmiejetnosci(`Musisz posiadać ${WYMAGANE_UMIEJETNOSCI_DO_MAXA} odblokowane umiejętności`);
+      return;
+    }
     if (monety < KOSZT_ULEPSZENIA_UMIEJETNOSCI) { potrzasnij(monetyEl); return; }
     monety -= KOSZT_ULEPSZENIA_UMIEJETNOSCI;
     s.poziom += 1;
@@ -380,6 +406,7 @@ function obsluzKlikUmiejetnosci(event) {
 function otworzUmiejetnosci() {
   const overlay = document.getElementById("umiejetnosci-overlay");
   if (!overlay || umiejetnosciOtwarte) return;
+  if (typeof odliczanieTrwa !== "undefined" && odliczanieTrwa) return;   // trwa odliczanie po ulepszeniu itemu
   if (typeof wikiOtwarta !== "undefined" && wikiOtwarta) return;
 
   if (graTrwa && !oczekiwanieNaUlepszenieItemu) {
