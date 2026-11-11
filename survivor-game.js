@@ -1750,6 +1750,8 @@ function atakGracza() {
   if (typeof czyShuriken === "function" && czyShuriken()) { atakShurikena(cel, staty1); return; }
   // Pająk: własny atak i umiejętności — survivor-pajak.js
   if (typeof czyPajak === "function" && czyPajak()) { atakPajaka(cel, staty1); return; }
+  // Inżynier: własny atak i umiejętności — survivor-inzynier.js
+  if (typeof czyInzynier === "function" && czyInzynier()) { atakInzyniera(cel, staty1); return; }
 
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
@@ -1923,6 +1925,7 @@ function aktualizujPociskiGracza(dtMs) {
     if (typeof jestPociskPistoletu === "function" && jestPociskPistoletu(pocisk)) return aktualizujPociskPistoletu(pocisk, dtMs, staty1);
     if (typeof jestPociskShurikena === "function" && jestPociskShurikena(pocisk)) return aktualizujPociskShurikena(pocisk, dtMs, staty1);
     if (typeof jestPociskPajaka === "function" && jestPociskPajaka(pocisk)) return aktualizujPociskPajaka(pocisk, dtMs, staty1);
+    if (typeof jestPociskInzyniera === "function" && jestPociskInzyniera(pocisk)) return aktualizujPociskInzyniera(pocisk, dtMs, staty1);
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
 
@@ -2424,6 +2427,7 @@ function rysujGre() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (typeof rysujPlamyZiemi === "function") rysujPlamyZiemi();   // ślady po Ziemi Kostura (pod wszystkim)
   if (typeof rysujPlamyPajaka === "function") rysujPlamyPajaka(); // skażone obszary Kwasowej chmury
+  if (typeof rysujObiektyInzyniera === "function") rysujObiektyInzyniera(); // działka, wieżyczki, kolczatki, gryzaki
 
   ctx.beginPath();
   ctx.arc(postac.x, postac.y, 20, 0, Math.PI * 2);
@@ -2511,6 +2515,7 @@ function rysujGre() {
     if (typeof rysujPociskPistoletu === "function" && rysujPociskPistoletu(p)) return;
     if (typeof rysujPociskShurikena === "function" && rysujPociskShurikena(p)) return;
     if (typeof rysujPociskPajaka === "function" && rysujPociskPajaka(p)) return;
+    if (typeof rysujPociskInzyniera === "function" && rysujPociskInzyniera(p)) return;
     if (p.typ === "magiczna") {
       // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
       const r = 7;
@@ -2801,6 +2806,7 @@ function petlaGry(teraz) {
   if (typeof aktualizujPistoletu === "function") aktualizujPistoletu(dtMs);
   if (typeof aktualizujShurikena === "function") aktualizujShurikena(dtMs);
   if (typeof aktualizujPajaka === "function") aktualizujPajaka(dtMs);
+  if (typeof aktualizujInzyniera === "function") aktualizujInzyniera(dtMs);
 
   aktualizujWrogowZBlokowaniem(dtMs, czasWirtualny);
   rozsunWrogow(czasWirtualny);
@@ -2845,6 +2851,7 @@ function rozpocznijGre() {
   if (typeof resetujPistoletu === "function") resetujPistoletu();
   if (typeof resetujShurikena === "function") resetujShurikena();
   if (typeof resetujPajaka === "function") resetujPajaka();
+  if (typeof resetujInzyniera === "function") resetujInzyniera();
   if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();

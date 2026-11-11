@@ -154,6 +154,39 @@ const UMIEJETNOSCI_PAJAK = [
   }
 ];
 
+const UMIEJETNOSCI_INZYNIER = [
+  {
+    id: "elektryczna", nazwa: "Działka plazmowe", plik: "INŻYNIERZY/dzialka.png", kol: 0, wiersz: 0,
+    bonus: "Co 3. strzał jest wzmocniony.",
+    opis: p => `Rozstawiasz działka (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
+  },
+  {
+    id: "potrojna", fizyczne: true, nazwa: "Wieżyczki", plik: "INŻYNIERZY/wiezyczka.png", kol: 1, wiersz: 0,
+    bonus: "2x prędkość strzelania.",
+    opis: p => `Rozstawiasz wieżyczki (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń fizycznych.`
+  },
+  {
+    id: "ognista", nazwa: "Kolczatki", plik: "INŻYNIERZY/kolczatka.png", kol: 0, wiersz: 1,
+    bonus: () => `Po zużyciu kolców lub czasu wybuchają za ${dmgMagiczne(1)}.`,
+    opis: p => `Co <span class="umiej-lvl">5</span> s rozstawiasz kolczatki na <span class="umiej-lvl">${[28, 36, 44, 52, 60][p]}</span> s mające <span class="umiej-lvl">${[4, 6, 8, 10, 12][p]}</span> kolców. Każdy zadaje <span class="umiej-dmg">${dmgMagiczne([0.15, 0.25, 0.35, 0.45, 0.5][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "odlamkowa", nazwa: "Gryzaki", plik: "INŻYNIERZY/gryzak.png", kol: 1, wiersz: 1,
+    bonus: "3 gryzaki na raz.",
+    opis: p => `Co <span class="umiej-lvl">10</span> s rozstawiasz gryzaki zadające <span class="umiej-dmg">${dmgMagiczne([0.5, 1, 1.5, 2, 2.5][p])}</span> obrażeń magicznych przez 3 s. Gryzaki trwają <span class="umiej-lvl">${[10, 15, 20, 25, 30][p]}</span> s.`
+  },
+  {
+    id: "magiczna", nazwa: "Rakiety", plik: "INŻYNIERZY/rakieta.png", kol: 0, wiersz: 2,
+    bonus: "33% szansy na wybuch rakiety.",
+    opis: p => `Co <span class="umiej-lvl">10</span> s strzelasz rakietami w ilości <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> w najbliższego wroga. Każda zadaje <span class="umiej-dmg">${dmgMagiczne([0.15, 0.25, 0.35, 0.45, 0.5][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "wampiryczna", nazwa: "Wampiryzm", plik: "INŻYNIERZY/wampir.png", kol: 1, wiersz: 2,
+    bonus: "Kradzież życia: 5%",
+    opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
+  }
+];
+
 /* Wspólny zabieg dla Księgi, Amunicji, Shuriken2 i Jada: jeden stały affix specjalny +
    (Wartość ataku ALBO Obrażenia umiejętności) + (Prędkość ataku ALBO Szybkość zaklęcia). */
 const AMUNICJA_MOZLIWE = ["Wartość ataku", "Obrażenia umiejętności", "Prędkość ataku", "Szybkość zaklęcia"];
@@ -179,7 +212,7 @@ const BRONIE = {
     affixyAmunicji: ["Czarnoksięstwo"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 6 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 8 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   pistolet: {
@@ -212,6 +245,18 @@ const BRONIE = {
     // Jad: stały unikalny affix "Jad" + po jednym z dwóch par (albo-albo): Wartość ataku / Obrażenia umiejętności,
     // Prędkość ataku / Szybkość zaklęcia
     affixyAmunicji: ["Jad"],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
+  },
+  inzynier: {
+    nazwa: "Inżynier", nazwaAmunicji: "Narzędzia", ikona: "🔧",
+    zakresyBroni: { "Podstawowe obrażenia": { min: 3500, max: 5000 } },
+    bron: "inzynier.png", amunicja: "inzynier2.png",
+    umiejetnosci: UMIEJETNOSCI_INZYNIER,
+    // item amunicji: stały affix + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia)
+    affixyAmunicji: ["Szansa na kryta"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
     zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
@@ -273,7 +318,8 @@ const KLASY_WYBORU = [
   { klasa: "Mag", bron: "kostur" },
   { klasa: "Żołnierz", bron: "pistolet" },
   { klasa: "Ninja", bron: "shuriken" },
-  { klasa: "Szaman", bron: "pajak" }
+  { klasa: "Szaman", bron: "pajak" },
+  { klasa: "Inżynier", bron: "inzynier" }
 ];
 
 /* Styl samej OKRĄGŁEJ ikony umiejętności "wyciętej" z kafelka: ten sam fragment grafiki co duża
@@ -360,8 +406,31 @@ function zamknijWyborBroni() {
   wyborBroniOtwarty = false;
 }
 
+/* Skrypty z mechanikami klas (poza Łukiem, którego mechaniki są w survivor-game.js):
+   id broni -> [funkcja, plik]. Gdy skryptu brakuje (np. nie ma go w index.html), gra cicho
+   użyłaby mechanik Łuku, więc zamiast tego ostrzegamy i nie pozwalamy wybrać klasy. */
+const MODULY_KLAS = {
+  kostur: ["czyKostur", "survivor-kostur.js"],
+  pistolet: ["czyPistolet", "survivor-pistolet.js"],
+  shuriken: ["czyShuriken", "survivor-shuriken.js"],
+  pajak: ["czyPajak", "survivor-pajak.js"],
+  inzynier: ["czyInzynier", "survivor-inzynier.js"]
+};
+
+function brakujacyModulKlasy(id) {
+  const m = MODULY_KLAS[id];
+  if (!m) return null;
+  return typeof window[m[0]] === "function" ? null : m[1];
+}
+
 function wybierzBron(id) {
   if (!BRONIE[id]) return;
+  const brak = brakujacyModulKlasy(id);
+  if (brak) {
+    console.error(`Brak mechanik klasy: nie załadowano ${brak} (sprawdź <script> w index.html i czy plik istnieje).`);
+    alert(`Nie można wybrać tej klasy: brakuje pliku ${brak}.\nDodaj go do folderu gry i do index.html (po survivor-game.js).`);
+    return;
+  }
   const innaKlasa = rozegranoGre && id !== ostatniaGranaBron;
   zastosujBron(id);
   // inna klasa niż ostatnio grana: ekwipunek (odblokowane itemy, affixy, zmianki) od zera
@@ -389,7 +458,7 @@ function resetujWyborBroni() {
   ostatniaGranaBron = aktualnaBron;
 }
 
-/* Klawisze 1-5 wybierają klasę (kartę), gdy okno jest otwarte. */
+/* Klawisze 1-6 wybierają klasę (kartę), gdy okno jest otwarte. */
 document.addEventListener("keydown", event => {
   if (!wyborBroniOtwarty) return;
   const klasa = KLASY_WYBORU[Number(event.key) - 1];

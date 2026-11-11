@@ -39,8 +39,8 @@ const itemy = {
     obraz: "naramienniki.png",
     pozycja: { kolumna: 3, wiersz: 2 },
     stalyAffix: null,
-    // "Obrażenia umiejętności" 1–6% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
-    zakresy: { "Obrażenia umiejętności": { min: 1, max: 6 } },
+    // "Obrażenia umiejętności" 1–8% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 8 } },
     wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
       "Obrażenia umiejętności",
@@ -58,8 +58,8 @@ const itemy = {
     obraz: "rekawice.png",
     pozycja: { kolumna: 1, wiersz: 2 },
     stalyAffix: null,
-    // "Obrażenia umiejętności" 1–6% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
-    zakresy: { "Obrażenia umiejętności": { min: 1, max: 6 } },
+    // "Obrażenia umiejętności" 1–8% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 8 } },
     wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
       "Obrażenia umiejętności",
@@ -106,8 +106,8 @@ const itemy = {
     obraz: "bransoleta.png",
     pozycja: { kolumna: 4, wiersz: 2 },
     stalyAffix: null,
-    // "Obrażenia umiejętności" 1–6% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
-    zakresy: { "Obrażenia umiejętności": { min: 1, max: 6 } },
+    // "Obrażenia umiejętności" 1–8% ZAMIENNIE z "Wartość ataku": albo jeden, albo drugi, albo żaden
+    zakresy: { "Obrażenia umiejętności": { min: 1, max: 8 } },
     wykluczajace: [["Wartość ataku", "Obrażenia umiejętności"]],
     mozliweAffixy: [
       "Obrażenia umiejętności",
