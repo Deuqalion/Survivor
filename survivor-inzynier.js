@@ -13,6 +13,7 @@
    ============================================================ */
 
 /* Zwykły atak */
+const SZPILKA_DLUGOSC = 24;                // długość pocisku wieżyczki (połowa wbija się w wroga)
 const INZ_PREDKOSC_POCISKU = 900;
 const INZ_PROMIEN_TRAFIENIA = 10;
 
@@ -22,6 +23,8 @@ const INZ_LICZBA_STANOWISK = [1, 1, 2, 2, 3];
 
 /* Działka plazmowe */
 const DZIALKO_CO_MS = 1000;
+const DZIALKO_ZASIEG = 450;                 // działko reaguje tylko na wrogów w tym zasięgu
+const DZIALKO_MNOZNIK = [1, 1.05, 1.1, 1.15, 1.2];
 const DZIALKO_PREDKOSC = 1300;            // szybki "laser" — wróg nie zdąży zejść z linii strzału
 const DZIALKO_DLUGOSC_LASERA = 64;         // wzmocniony: 2x dłuższy
 const DZIALKO_PROMIEN_POCISKU = 6;
@@ -33,12 +36,17 @@ const DZIALKO_WZMOCNIONY_OBRAZENIA = 2;     // 2x więcej obrażeń, przebija wr
 const WIEZYCZKA_CO_MS = 1500;               // max poziom: 750 ms
 const WIEZYCZKA_PREDKOSC = 1500;
 const WIEZYCZKA_MNOZNIK = [0.6, 0.7, 0.8, 0.9, 1];
+const WIEZYCZKA_ZASIEG = 450;
+const WIEZYCZKA_REDUKCJA_PANCERZA = 0.08;      // każdy pocisk: -8% pancerza wroga
+const WIEZYCZKA_MAX_REDUKCJA_PANCERZA = 0.4;   // maks. -40%
+const WIEZYCZKA_CZAS_WBICIA_MS = 5000;         // jak długo szpilka tkwi w wrogu (wizualnie)
+const WIEZYCZKA_MAX_WBITYCH = 6;               // maks. widocznych szpilek w jednym wrogu
 
 /* Kolczatki */
 const KOLCZATKI_CO_S = 5;
 const KOLCZATKI_CZAS_S = [28, 36, 44, 52, 60];
 const KOLCZATKI_KOLCE = [4, 6, 8, 10, 12];
-const KOLCZATKI_MNOZNIK = [0.15, 0.25, 0.35, 0.45, 0.5];
+const KOLCZATKI_MNOZNIK = [0.52, 0.54, 0.56, 0.58, 0.6];
 const KOLCZATKA_PROMIEN = 11;
 const KOLCZATKA_PROMIEN_WYBUCHU = PROMIEN_OGNIA;       // max poziom: wybuch obszarowy
 const KOLOR_WYBUCHU_KOLCZATKI = "205, 210, 220";
@@ -46,21 +54,22 @@ const KOLOR_WYBUCHU_KOLCZATKI = "205, 210, 220";
 /* Gryzaki */
 const GRYZAKI_CO_S = 10;
 const GRYZAKI_CZAS_S = [10, 15, 20, 25, 30];
-const GRYZAKI_MNOZNIK = [0.5, 1, 1.5, 2, 2.5];         // łączne obrażenia z 3 s gryzienia
+const GRYZAKI_MNOZNIK = [1.5, 2, 2.5, 3, 3.5];         // łączne obrażenia z 5 s gryzienia
+const GRYZAK_SPOWOLNIENIE = 0.3;                       // gryziony wróg: -30% prędkości na czas gryzienia
 const GRYZAK_PROMIEN = 14;
-const GRYZAK_CZAS_GRYZIENIA_MS = 3000;
+const GRYZAK_CZAS_GRYZIENIA_MS = 5000;
 const GRYZAK_TIK_MS = 500;
 
 /* Rakiety */
 const RAKIETY_CO_S = 10;
 const RAKIETY_LICZBA = [3, 5, 7, 9, 11];
-const RAKIETY_MNOZNIK = [0.15, 0.25, 0.35, 0.45, 0.5];
+const RAKIETY_MNOZNIK = [0.52, 0.54, 0.56, 0.58, 0.6];
 const RAKIETA_PREDKOSC = 540;
 const RAKIETA_ODSTEP_STARTU_MS = 35;       // krótki odstęp między wystrzałami kolejnych rakiet
 const RAKIETA_SZANSA_WYBUCHU = 33;          // max poziom
 const KOLOR_WYBUCHU_RAKIETY = "255, 150, 50";
 
-const INZ_TYPY_POCISKOW = ["inz", "plazma", "szpilka", "rakieta"];
+const INZ_TYPY_POCISKOW = ["inz", "plazma", "szpilka", "szpilkaWbita", "rakieta"];
 
 let inzDzialka = [];
 let inzWiezyczki = [];
@@ -70,6 +79,9 @@ let inzGryzienia = [];                       // aktywne "podgryzania" (DoT) na w
 let inzKolczatkiMs = 0;
 let inzGryzakiMs = 0;
 let inzRakietyMs = 0;
+/* Pociski tworzone W TRAKCIE aktualizacji pocisków (wbite szpilki) nie mogą trafiać od razu do pociskiGracza —
+   aktualizujPociskiGracza podmienia tę tablicę wynikiem filter() — więc dołączamy je w następnej klatce. */
+let inzKolejkaPociskow = [];
 
 function czyInzynier() {
   return typeof aktualnaBron !== "undefined" && aktualnaBron === "inzynier";
@@ -85,6 +97,7 @@ function resetujInzyniera() {
   inzKolczatki = [];
   inzGryzaki = [];
   inzGryzienia = [];
+  inzKolejkaPociskow = [];
   inzKolczatkiMs = KOLCZATKI_CO_S * 1000;
   inzGryzakiMs = GRYZAKI_CO_S * 1000;
   inzRakietyMs = RAKIETY_CO_S * 1000;
@@ -100,6 +113,11 @@ function najblizszyWrogDo(x, y) {
     if (d < naj) { naj = d; wynik = w; }
   }
   return wynik;
+}
+
+function najblizszyWrogWZasiegu(x, y, zasieg) {
+  const w = najblizszyWrogDo(x, y);
+  return w && Math.hypot(w.x - x, w.y - y) <= zasieg ? w : null;
 }
 
 /* Stanowisko i (0..2) na okręgu o promieniu 343 wokół środka areny, co 120°.
@@ -149,6 +167,23 @@ function strzalWiezyczki(w, cel) {
     typ: "szpilka", x: w.x + (dx / dl) * 18, y: w.y + (dy / dl) * 18, dx: dx / dl, dy: dy / dl, trafieni: new Set()
   });
   w.kat = Math.atan2(dy, dx);
+}
+
+/* Szpilka wbija się w wroga (połowa długości tkwi w środku) i redukuje jego pancerz o 8% (max 40%). */
+function wbijSzpilke(w, pk) {
+  if (w.pancerzBazowy === undefined) w.pancerzBazowy = w.pancerz || 0;
+  w.redukcjaPancerza = Math.min(WIEZYCZKA_MAX_REDUKCJA_PANCERZA, (w.redukcjaPancerza || 0) + WIEZYCZKA_REDUKCJA_PANCERZA);
+  w.pancerz = w.pancerzBazowy * (1 - w.redukcjaPancerza);
+
+  const dl = SZPILKA_DLUGOSC;
+  const r = promienWroga(w);
+  // grot wbity na pół długości w obrys wroga od strony strzelającego
+  const tipX = w.x - pk.dx * (r - dl / 2), tipY = w.y - pk.dy * (r - dl / 2);
+  const wbita = { typ: "szpilkaWbita", wrog: w, ox: tipX - w.x, oy: tipY - w.y, dx: pk.dx, dy: pk.dy, zycie: WIEZYCZKA_CZAS_WBICIA_MS, x: tipX, y: tipY };
+  w.wbiteSzpilki = (w.wbiteSzpilki || []).filter(s => s.zycie > 0);
+  w.wbiteSzpilki.push(wbita);
+  while (w.wbiteSzpilki.length > WIEZYCZKA_MAX_WBITYCH) w.wbiteSzpilki.shift().zycie = 0;
+  inzKolejkaPociskow.push(wbita);
 }
 
 /* ---------- KOLCZATKI ---------- */
@@ -211,7 +246,8 @@ function rozstawGryzaka(p) {
   inzGryzaki.push({
     x: pkt.x, y: pkt.y, kat: Math.random() * 6,
     zycie: GRYZAKI_CZAS_S[p] * 1000, zycieMax: GRYZAKI_CZAS_S[p] * 1000,
-    pasc: Math.random() * 6
+    pasc: Math.random() * 6,
+    wrog: null                                    // po złapaniu wroga gryzak przyczepia się do niego
   });
 }
 
@@ -231,33 +267,41 @@ function tikGryzienia(g, staty1) {
 
 function aktualizujGryzaki(dtMs, staty1) {
   const p = Math.max(0, poziomUmiejetnosci("odlamkowa"));
-  const lacznie = ((staty1.podstawoweObrażenia || 3000) + bonusObrazenZZabojstw()) * GRYZAKI_MNOZNIK[p] * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
+  const lacznie = ((staty1.podstawoweObrażenia || 3000) + zabiciDlaUmiejetnosci()) * GRYZAKI_MNOZNIK[p] * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
   const tikow = Math.round(GRYZAK_CZAS_GRYZIENIA_MS / GRYZAK_TIK_MS);
 
   inzGryzaki = inzGryzaki.filter(g => {
+    g.pasc += dtMs / 1000 * (g.wrog ? 14 : 11);   // szczęka otwiera się i zatrzaskuje (szybciej przy gryzieniu)
+
+    // --- gryzak przyczepiony do wroga: gryzie go od dołu do góry przez cały czas gryzienia
+    if (g.wrog) {
+      const w = g.wrog;
+      if (w.hp <= 0) return false;                 // wróg zginął — gryzak znika
+      g.doTiku -= dtMs;
+      while (g.doTiku <= 0 && g.zostalo > 0 && w.hp > 0) {
+        g.doTiku += GRYZAK_TIK_MS;
+        g.zostalo -= 1;
+        tikGryzienia(g, staty1);
+      }
+      return g.zostalo > 0 && w.hp > 0;
+    }
+
+    // --- gryzak na ziemi: czeka na wroga (trwa X s)
     g.zycie -= dtMs;
     g.kat += dtMs / 1000 * 3.5;
-    g.pasc += dtMs / 1000 * 11;                    // faza otwierania/zamykania szczęki
-
     for (const w of wrogowie) {
       if (w.hp <= 0) continue;
       if (Math.hypot(w.x - g.x, w.y - g.y) > GRYZAK_PROMIEN + promienWroga(w) * 0.7) continue;
-      // wróg wszedł w gryzaka: zaczyna być gryziony przez 3 s (tik co 0,5 s), a gryzak znika
-      inzGryzienia.push({ wrog: w, dmgTik: lacznie / tikow, zostalo: tikow, doTiku: GRYZAK_TIK_MS });
-      return false;
+      g.wrog = w;                                  // łapie wroga
+      g.zostalo = tikow;
+      g.doTiku = GRYZAK_TIK_MS;
+      g.dmgTik = lacznie / tikow;
+      // spowolnienie -30% na czas gryzienia
+      w.spowolnionyDoCzasu = Math.max(w.spowolnionyDoCzasu || 0, czasWirt() + GRYZAK_CZAS_GRYZIENIA_MS);
+      w.silaSpowolnienia = Math.max(w.silaSpowolnienia || 0, GRYZAK_SPOWOLNIENIE);
+      return true;
     }
     return g.zycie > 0;
-  });
-
-  inzGryzienia = inzGryzienia.filter(gr => {
-    if (gr.wrog.hp <= 0) return false;
-    gr.doTiku -= dtMs;
-    while (gr.doTiku <= 0 && gr.zostalo > 0 && gr.wrog.hp > 0) {
-      gr.doTiku += GRYZAK_TIK_MS;
-      gr.zostalo -= 1;
-      tikGryzienia(gr, staty1);
-    }
-    return gr.zostalo > 0 && gr.wrog.hp > 0;
   });
 }
 
@@ -334,6 +378,10 @@ function trafienieRakiety(r, cel, staty1) {
 /* ---------- pętla ---------- */
 
 function aktualizujInzyniera(dtMs) {
+  if (inzKolejkaPociskow.length) {
+    pociskiGracza.push(...inzKolejkaPociskow);
+    inzKolejkaPociskow = [];
+  }
   const staty1 = stan[1].staty;
   // struktury istnieją tylko w tej klasie
   if (!czyInzynier() || !staty1) return;
@@ -348,7 +396,7 @@ function aktualizujInzyniera(dtMs) {
     inzDzialka.forEach(d => {
       d.doStrzalu -= dtMs;
       if (d.doStrzalu > 0) return;
-      const cel = najblizszyWrogDo(d.x, d.y);
+      const cel = najblizszyWrogWZasiegu(d.x, d.y, DZIALKO_ZASIEG);
       if (!cel) { d.doStrzalu = 0; return; }
       strzalDzialka(d, cel);
       d.doStrzalu = DZIALKO_CO_MS;
@@ -366,7 +414,7 @@ function aktualizujInzyniera(dtMs) {
     inzWiezyczki.forEach(w => {
       w.doStrzalu -= dtMs;
       if (w.doStrzalu > 0) return;
-      const cel = najblizszyWrogDo(w.x, w.y);
+      const cel = najblizszyWrogWZasiegu(w.x, w.y, WIEZYCZKA_ZASIEG);
       if (!cel) { w.doStrzalu = 0; return; }
       strzalWiezyczki(w, cel);
       w.doStrzalu = interwal;
@@ -429,7 +477,7 @@ function aktualizujPociskInzyniera(p, dtMs, staty1) {
     case "plazma": {
       const rozmiar = p.wzmocniony ? DZIALKO_WZMOCNIONY_ROZMIAR : 1;
       const promienPocisku = DZIALKO_PROMIEN_POCISKU * rozmiar;
-      const mnoznik = p.wzmocniony ? DZIALKO_WZMOCNIONY_OBRAZENIA : 1;
+      const mnoznik = (p.wzmocniony ? DZIALKO_WZMOCNIONY_OBRAZENIA : 1) * DZIALKO_MNOZNIK[Math.max(0, poziomUmiejetnosci("elektryczna"))];
       return ruchZPodkrokami(p, DZIALKO_PREDKOSC, dtMs, pk => {
         for (const w of wrogowie.slice()) {
           if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
@@ -451,9 +499,19 @@ function aktualizujPociskInzyniera(p, dtMs, staty1) {
           pk.trafieni.add(w.id);
           // fizyczne: CO * mnożnik; tylko kryt i przeszywka, bez trucizny/krwawienia/omdlenia
           wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, 1, { bezEfektow: true, mnoznikSkilla: WIEZYCZKA_MNOZNIK[pWiez], zrodloDmg: "potrojna" });
+          if (w.hp > 0) wbijSzpilke(w, pk);               // szpilka "wbija się" i obniża pancerz wroga
         }
         return false;                               // przebija wrogów
       });
+    }
+
+    case "szpilkaWbita": {
+      // tkwi w wrogu i porusza się razem z nim, dopóki żyje (lub minie czas)
+      p.zycie -= dtMs;
+      if (p.zycie <= 0 || !p.wrog || p.wrog.hp <= 0) return false;
+      p.x = p.wrog.x + p.ox;
+      p.y = p.wrog.y + p.oy;
+      return true;
     }
 
     case "rakieta": {
@@ -572,13 +630,20 @@ function rysujKolczatke(k) {
 /* Robotyczna szczęka: metalowa podstawa z diodą, dwie szczęki z zębami otwierają się i zatrzaskują;
    cała maszyna się trzęsie i powoli obraca. */
 function rysujGryzaka(g) {
-  const migot = g.zycie < 3000 ? (Math.floor(g.zycie / 250) % 2 ? 0.5 : 1) : 1;
+  const migot = (!g.wrog && g.zycie < 3000) ? (Math.floor(g.zycie / 250) % 2 ? 0.5 : 1) : 1;
   const tx = (Math.random() - 0.5) * 2.4, ty = (Math.random() - 0.5) * 2.4;
   const rozwarcie = 0.08 + 0.62 * Math.abs(Math.sin(g.pasc));      // kąt otwarcia szczęk
   ctx.save();
   ctx.globalAlpha = migot;
-  ctx.translate(g.x + tx, g.y + ty);
-  ctx.rotate(g.kat);
+  if (g.wrog) {
+    // przyczepiony do wroga od dołu: szczęki skierowane w górę, gryzą go
+    const w = g.wrog;
+    ctx.translate(w.x + tx, w.y + promienWroga(w) * 0.8 + ty);
+    ctx.rotate(-Math.PI / 2);
+  } else {
+    ctx.translate(g.x + tx, g.y + ty);
+    ctx.rotate(g.kat);
+  }
 
   const szczeka = strona => {
     ctx.save();
@@ -710,7 +775,7 @@ function rysujPociskInzyniera(p) {
 
     case "szpilka": {
       // "T": krótka biała szpilka z poprzeczką z tyłu
-      const dl = 24;
+      const dl = SZPILKA_DLUGOSC;
       const px = -p.dy, py = p.dx;
       const xT = p.x - p.dx * dl, yT = p.y - p.dy * dl;
       ctx.save();
@@ -727,6 +792,35 @@ function rysujPociskInzyniera(p) {
       ctx.moveTo(xT + px * 4.2, yT + py * 4.2);
       ctx.lineTo(xT - px * 4.2, yT - py * 4.2);
       ctx.lineWidth = 2.1;
+      ctx.stroke();
+      ctx.restore();
+      return true;
+    }
+
+    case "szpilkaWbita": {
+      // wbita szpilka: grot w środku, na zewnątrz wystaje druga połowa z poprzeczką
+      const dl = SZPILKA_DLUGOSC / 2;
+      const px = -p.dy, py = p.dx;
+      const xT = p.x - p.dx * dl, yT = p.y - p.dy * dl;
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(xT, yT);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = "#2b2f38";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xT, yT);
+      ctx.lineTo(p.x, p.y);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xT + px * 4.2, yT + py * 4.2);
+      ctx.lineTo(xT - px * 4.2, yT - py * 4.2);
+      ctx.lineWidth = 2.1;
+      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
       ctx.restore();
       return true;

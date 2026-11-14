@@ -69,7 +69,7 @@ function dmgFizyczne(mnoznik) {
    (Podstawowe obrażenia + ilość zabitych) * mnożnik umiejętności * (1 + Obrażenia umiejętności %). */
 function dmgMagiczne(mnoznik, podstawa) {
   const { podst, um } = statyUmiejetnosci();
-  const zabici = (typeof bonusObrazenZZabojstw === "function") ? bonusObrazenZZabojstw() : 0;
+  const zabici = (typeof zabiciDlaUmiejetnosci === "function") ? zabiciDlaUmiejetnosci() : 0;   // Z wraz z Nekromancją
   const baza = (podstawa !== undefined) ? podstawa : podst;   // podstawa = stała zamiast Podstawowych obrażeń (np. 700 dla Ognia)
   return fmtUmiej((baza + zabici) * mnoznik * (1 + um / 100));
 }

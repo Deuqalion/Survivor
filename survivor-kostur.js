@@ -44,14 +44,20 @@ const KOSTUR_POWIETRZE_CZAS_MS = 8000;
 const KOSTUR_PREDKOSC_TORNADA = 260;
 const KOSTUR_PROMIEN_TORNADA = 36;
 const KOSTUR_ODSTEP_TORNAD_MS = 250;                    // kolejne tornada z jednej salwy startują co 0,25s
-const KOSTUR_TORNADO_OFFSET = 50;                       // losowe przesunięcie toru od środka areny (px)
+const KOSTUR_TORNADO_OFFSET = 100;                       // losowe przesunięcie toru od środka areny (px)
 const KOSTUR_SPOWOLNIENIE = 0.2;
 const KOSTUR_CZAS_SPOWOLNIENIA_MS = 3000;
 
 /* Woda */
 const KOSTUR_WODA_CZAS_BAZA_S = 8;                      // co (8 - poziom) s
 const KOSTUR_PREDKOSC_FALI = 520;
-const KOSTUR_POL_SZEROKOSCI_FALI = 40;                  // fala szeroka na 2 średnice postaci (2 * 40 px)
+const KOSTUR_POL_SZEROKOSCI_FALI = 40;
+const KOSTUR_DYSTANS_MAX_SZEROKOSCI_FALI = 540;         // po tylu px fala ma 2x początkową szerokość
+/* Aktualna połowa szerokości fali (rośnie liniowo od 1x do 2x na dystansie 540). */
+function poloweSzerokosciFali(p) {
+  const przebyte = Math.hypot(p.x - p.x0, p.y - p.y0);
+  return KOSTUR_POL_SZEROKOSCI_FALI * (1 + Math.min(1, przebyte / KOSTUR_DYSTANS_MAX_SZEROKOSCI_FALI));
+}                  // fala szeroka na 2 średnice postaci (2 * 40 px)
 const KOSTUR_SZANSA_ODEPCHNIECIA = 33;
 const KOSTUR_DYSTANS_ODEPCHNIECIA = PROMIEN_OGNIA;      // 110 px
 const KOSTUR_PREDKOSC_ODEPCHNIECIA = 700;
@@ -259,7 +265,8 @@ function wystrzelGlaz() {
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
   const d = Math.hypot(dx, dy) || 1;
-  pociskiGracza.push({ typ: "ziemia", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d, cx: cel.x, cy: cel.y });
+  const ksztalt = Array.from({ length: 9 }, () => 0.72 + Math.random() * 0.5);   // nierówny kształt głazu (promienie wierzchołków)
+  pociskiGracza.push({ typ: "ziemia", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d, cx: cel.x, cy: cel.y, ksztalt, kat: Math.random() * 6 });
   return true;
 }
 
@@ -384,7 +391,7 @@ function wystrzelFale() {
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
   const d = Math.hypot(dx, dy) || 1;
-  pociskiGracza.push({ typ: "fala", x: postac.x, y: postac.y, dx: dx / d, dy: dy / d, trafieni: new Set() });
+  pociskiGracza.push({ typ: "fala", x: postac.x, y: postac.y, x0: postac.x, y0: postac.y, dx: dx / d, dy: dy / d, trafieni: new Set() });
   return true;
 }
 
@@ -497,6 +504,7 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
       }
       p.x += (dx / d) * krok;
       p.y += (dy / d) * krok;
+      p.kat += dtMs / 1000 * 5;                     // głaz obraca się w locie
       return true;
     }
 
@@ -510,7 +518,7 @@ function aktualizujPociskKostura(p, dtMs, staty1) {
           const przod = rx * pk.dx + ry * pk.dy;
           const r = promienWroga(w);
           if (przod < -r) continue;
-          if (Math.hypot(rx, ry) > KOSTUR_POL_SZEROKOSCI_FALI + r * 0.5) continue;
+          if (Math.hypot(rx, ry) > poloweSzerokosciFali(pk) + r * 0.5) continue;
 
           pk.trafieni.add(w.id);
           atakUmiejetnosciKostura(w, staty1, pk.x, pk.y, KOSTUR_MNOZNIK_ZIEMI_WODY[Math.max(0, pWoda)], "potrojna");
@@ -578,28 +586,48 @@ function rysujPociskKostura(p) {
     }
 
     case "ziemia": {
-      const r = 8, dlugoscOgona = 36;
-      const px = -p.dy, py = p.dx;
+      // głaz: nierówny wielobok (obracający się), kamienny z jaśniejszą ścianką i ciemnym obrysem
+      const R = 13;
+      const n = p.ksztalt.length;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.kat);
       ctx.beginPath();
-      ctx.moveTo(p.x - p.dx * dlugoscOgona, p.y - p.dy * dlugoscOgona);
-      ctx.lineTo(p.x + px * r, p.y + py * r);
-      ctx.lineTo(p.x - px * r, p.y - py * r);
+      for (let i = 0; i < n; i++) {
+        const a = i * Math.PI * 2 / n;
+        const r = R * p.ksztalt[i];
+        const x = Math.cos(a) * r, y = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
       ctx.closePath();
-      ctx.fillStyle = "#3fae44";
+      ctx.fillStyle = "#7a6a52";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#2e2518";
+      ctx.stroke();
+      // jaśniejsza ścianka i pęknięcie dla wrażenia bryły
+      ctx.beginPath();
+      ctx.moveTo(-R * 0.45, -R * 0.35);
+      ctx.lineTo(R * 0.1, -R * 0.6);
+      ctx.lineTo(R * 0.4, -R * 0.1);
+      ctx.lineTo(-R * 0.1, R * 0.05);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(190, 170, 135, 0.55)";
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = "#62d466";
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = "#d4ffc8";
+      ctx.moveTo(R * 0.05, R * 0.1);
+      ctx.lineTo(R * 0.35, R * 0.55);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(40, 30, 18, 0.8)";
       ctx.stroke();
+      ctx.restore();
       return true;
     }
 
     case "fala": {
       const kat = Math.atan2(p.dy, p.dx);
-      const R = KOSTUR_POL_SZEROKOSCI_FALI;
+      const R = poloweSzerokosciFali(p);
       ctx.save();
       ctx.lineCap = "round";
       ctx.shadowColor = "#4db8ff";

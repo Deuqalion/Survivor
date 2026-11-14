@@ -103,6 +103,13 @@ function bonusObrazenZZabojstw() {
   return liczbaZabitych;
 }
 
+/* Z w wzorach obrażeń UMIEJĘTNOŚCI: (PO + Z) * ... Affix "Nekromancja" (Latarnia) zwiększa Z o x%
+   (np. 1000 zabitych i 150% -> Z = 2500). Zwykłe ataki fizyczne nadal używają zwykłego Z. */
+function zabiciDlaUmiejetnosci() {
+  const nekro = (stan[1].staty && stan[1].staty.nekromancja) || 0;
+  return Math.round(liczbaZabitych * (1 + nekro / 100));
+}
+
 const DMG_STYL_ZWYKLY = { kolor: "#ffffff", rozmiar: 14 };
 const DMG_STYL_PRZESZYWKA = { kolor: "#c9c9c9", rozmiar: 17 };
 const DMG_STYL_KRYT = { kolor: "#ffd700", rozmiar: 20 };
@@ -174,6 +181,7 @@ function obliczStatystyki(gracz) {
   let kradziezZycia = 0;
   let predkoscAtaku = 0;
   let szybkoscZaklecia = 0;
+  let nekromancja = 0;
   let predkoscRuchuBonus = 0;
   let regeneracjaPzSek = 0;
   let wskrzeszenieDostepne = false;
@@ -225,6 +233,8 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
       else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +17%") szybkoscZaklecia += val;
+      else if (nazwa === "Nekromancja") nekromancja += val;           // Latarnia Żniwiarza: zwiększa Z umiejętności
+      else if (nazwa === "Mechatronika") szybkoscZaklecia += val;     // skrzynka narzędziowa Inżyniera (efekt do potwierdzenia)
       else if (nazwa === "Jad") { otrucie += val; wzmocnienieTrucizny += val; }   // Jad: pasywka = +x pp Szansy na otrucie i Wzmocnienia trucizny
       else if (nazwa === "Destrukcja") { wzmocnienieKrytyczne += val; wzmocnienieTrucizny += val; }   // Amunicja: pasywka = +x pp do obu wzmocnień
       else if (nazwa === "Czarnoksięstwo") { obrazeniaUmiejetnosci += val; szybkoscZaklecia += val; }   // Księga: pasywka = +x pp Obrażeń umiejętności i Szybkości zaklęcia
@@ -270,6 +280,7 @@ function obliczStatystyki(gracz) {
     kradziezZycia: isNaN(kradziezZycia) ? 0 : kradziezZycia,
     predkoscAtaku: isNaN(predkoscAtaku) ? 0 : predkoscAtaku,
     szybkoscZaklecia: isNaN(szybkoscZaklecia) ? 0 : szybkoscZaklecia,
+    nekromancja: isNaN(nekromancja) ? 0 : nekromancja,
     predkoscRuchuBonus: isNaN(predkoscRuchuBonus) ? 0 : predkoscRuchuBonus,
     regeneracjaPzSek: isNaN(regeneracjaPzSek) ? 0 : regeneracjaPzSek,
     wskrzeszenieDostepne: !!wskrzeszenieDostepne,
@@ -1631,7 +1642,7 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
   const krytMagiczny = szansaKrytuMagii > 0 && losujProcent() < szansaKrytuMagii;
   // (Podstawowe obrażenia + zabici); opcje.podstawa podmienia "Podstawowe obrażenia" (np. 700 dla wybuchu Ognia)
   const podstawaObrazen = opcje.podstawa ?? (staty1.podstawoweObrażenia || 3000);
-  const baza = (podstawaObrazen + bonusObrazenZZabojstw()) * mnoznik * (krytMagiczny ? mnoznikKrytuMagii : 1);
+  const baza = (podstawaObrazen + zabiciDlaUmiejetnosci()) * mnoznik * (krytMagiczny ? mnoznikKrytuMagii : 1);
   const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
   const { dmg, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe);
 
@@ -1752,6 +1763,8 @@ function atakGracza() {
   if (typeof czyPajak === "function" && czyPajak()) { atakPajaka(cel, staty1); return; }
   // Inżynier: własny atak i umiejętności — survivor-inzynier.js
   if (typeof czyInzynier === "function" && czyInzynier()) { atakInzyniera(cel, staty1); return; }
+  // Żniwiarz: własny atak i umiejętności — survivor-zniwiarz.js
+  if (typeof czyZniwiarz === "function" && czyZniwiarz()) { atakZniwiarza(cel, staty1); return; }
 
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
@@ -1926,6 +1939,7 @@ function aktualizujPociskiGracza(dtMs) {
     if (typeof jestPociskShurikena === "function" && jestPociskShurikena(pocisk)) return aktualizujPociskShurikena(pocisk, dtMs, staty1);
     if (typeof jestPociskPajaka === "function" && jestPociskPajaka(pocisk)) return aktualizujPociskPajaka(pocisk, dtMs, staty1);
     if (typeof jestPociskInzyniera === "function" && jestPociskInzyniera(pocisk)) return aktualizujPociskInzyniera(pocisk, dtMs, staty1);
+    if (typeof jestPociskZniwiarza === "function" && jestPociskZniwiarza(pocisk)) return aktualizujPociskZniwiarza(pocisk, dtMs, staty1);
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
 
@@ -1982,6 +1996,7 @@ function zabijWroga(wrog) {
   wrog.hp = 0;
   wrogowie = wrogowie.filter(w => w.id !== wrog.id);
   liczbaZabitych += 1;
+  if (typeof naZabiciuZniwiarza === "function") naZabiciuZniwiarza(wrog);   // Rozdarcie: dusza rozpada się na części
   renderujStatyGracza();
 
   // Monety: ARCYBOSS zawsze 2, pozostali wrogowie losowo 0–2.
@@ -2428,6 +2443,7 @@ function rysujGre() {
   if (typeof rysujPlamyZiemi === "function") rysujPlamyZiemi();   // ślady po Ziemi Kostura (pod wszystkim)
   if (typeof rysujPlamyPajaka === "function") rysujPlamyPajaka(); // skażone obszary Kwasowej chmury
   if (typeof rysujObiektyInzyniera === "function") rysujObiektyInzyniera(); // działka, wieżyczki, kolczatki, gryzaki
+  if (typeof rysujPodlozeZniwiarza === "function") rysujPodlozeZniwiarza(); // ściany bólu
 
   ctx.beginPath();
   ctx.arc(postac.x, postac.y, 20, 0, Math.PI * 2);
@@ -2480,6 +2496,8 @@ function rysujGre() {
     ctx.fillRect(x0, y0, szerokoscPaska * procent, 5);
   });
 
+  if (typeof rysujZniwiarzaNaWierzchu === "function") rysujZniwiarzaNaWierzchu();   // kosy, duszki, dusze, banshee
+
   pociski.forEach(p => {
     if (p.typWroga === "arcyboss") {
       // pociski Arcybossa: długi ogon (zanikający) z lekkim blurem
@@ -2516,6 +2534,7 @@ function rysujGre() {
     if (typeof rysujPociskShurikena === "function" && rysujPociskShurikena(p)) return;
     if (typeof rysujPociskPajaka === "function" && rysujPociskPajaka(p)) return;
     if (typeof rysujPociskInzyniera === "function" && rysujPociskInzyniera(p)) return;
+    if (typeof rysujPociskZniwiarza === "function" && rysujPociskZniwiarza(p)) return;
     if (p.typ === "magiczna") {
       // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
       const r = 7;
@@ -2807,6 +2826,7 @@ function petlaGry(teraz) {
   if (typeof aktualizujShurikena === "function") aktualizujShurikena(dtMs);
   if (typeof aktualizujPajaka === "function") aktualizujPajaka(dtMs);
   if (typeof aktualizujInzyniera === "function") aktualizujInzyniera(dtMs);
+  if (typeof aktualizujZniwiarza === "function") aktualizujZniwiarza(dtMs);
 
   aktualizujWrogowZBlokowaniem(dtMs, czasWirtualny);
   rozsunWrogow(czasWirtualny);
@@ -2852,6 +2872,7 @@ function rozpocznijGre() {
   if (typeof resetujShurikena === "function") resetujShurikena();
   if (typeof resetujPajaka === "function") resetujPajaka();
   if (typeof resetujInzyniera === "function") resetujInzyniera();
+  if (typeof resetujZniwiarza === "function") resetujZniwiarza();
   if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();

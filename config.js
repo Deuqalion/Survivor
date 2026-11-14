@@ -254,6 +254,14 @@ const affixy = [
     opis: "Dodaje {x} Prędkości ataku."
   },
   {
+    nazwa: "Nekromancja", min: 0, max: 120, suffix: "%", pasywka: true,
+    opis: "{x} zabitych jest dodawanych do przelicznika obrażeń Twoich umiejętności."
+  },
+  {
+    nazwa: "Mechatronika", min: 0, max: 17, suffix: "%", pasywka: true,
+    opis: "Dodaje {x} Szybkości zaklęcia."
+  },
+  {
     nazwa: "Jad", min: 0, max: 10, suffix: "%", pasywka: true,
     opis: "Dodaje {x} Szansy na otrucie i Wzmocnienia trucizny."
   },

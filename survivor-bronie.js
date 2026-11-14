@@ -158,30 +158,63 @@ const UMIEJETNOSCI_INZYNIER = [
   {
     id: "elektryczna", nazwa: "Działka plazmowe", plik: "INŻYNIERZY/dzialka.png", kol: 0, wiersz: 0,
     bonus: "Co 3. strzał jest wzmocniony.",
-    opis: p => `Rozstawiasz działka (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych.`
+    opis: p => `Rozstawiasz działka (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg">${dmgMagiczne([1, 1.05, 1.1, 1.15, 1.2][p])}</span> obrażeń magicznych.`
   },
   {
     id: "potrojna", fizyczne: true, nazwa: "Wieżyczki", plik: "INŻYNIERZY/wiezyczka.png", kol: 1, wiersz: 0,
     bonus: "2x prędkość strzelania.",
-    opis: p => `Rozstawiasz wieżyczki (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń fizycznych.`
+    opis: p => `Rozstawiasz wieżyczki (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń fizycznych i redukując pancerz o 8% (max 40%).`
   },
   {
     id: "ognista", nazwa: "Kolczatki", plik: "INŻYNIERZY/kolczatka.png", kol: 0, wiersz: 1,
     bonus: () => `Po zużyciu kolców lub czasu wybuchają za ${dmgMagiczne(1)}.`,
-    opis: p => `Co <span class="umiej-lvl">5</span> s rozstawiasz kolczatki na <span class="umiej-lvl">${[28, 36, 44, 52, 60][p]}</span> s mające <span class="umiej-lvl">${[4, 6, 8, 10, 12][p]}</span> kolców. Każdy zadaje <span class="umiej-dmg">${dmgMagiczne([0.15, 0.25, 0.35, 0.45, 0.5][p])}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">5</span> s rozstawiasz kolczatki na <span class="umiej-lvl">${[28, 36, 44, 52, 60][p]}</span> s mające <span class="umiej-lvl">${[4, 6, 8, 10, 12][p]}</span> kolców. Każdy zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "odlamkowa", nazwa: "Gryzaki", plik: "INŻYNIERZY/gryzak.png", kol: 1, wiersz: 1,
     bonus: "3 gryzaki na raz.",
-    opis: p => `Co <span class="umiej-lvl">10</span> s rozstawiasz gryzaki zadające <span class="umiej-dmg">${dmgMagiczne([0.5, 1, 1.5, 2, 2.5][p])}</span> obrażeń magicznych przez 3 s. Gryzaki trwają <span class="umiej-lvl">${[10, 15, 20, 25, 30][p]}</span> s.`
+    opis: p => `Co <span class="umiej-lvl">10</span> s rozstawiasz gryzaki zadające <span class="umiej-dmg">${dmgMagiczne([1.5, 2, 2.5, 3, 3.5][p])}</span> obrażeń magicznych przez 5 s i spowalniając o 30%. Gryzaki trwają <span class="umiej-lvl">${[10, 15, 20, 25, 30][p]}</span> s.`
   },
   {
     id: "magiczna", nazwa: "Rakiety", plik: "INŻYNIERZY/rakieta.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na wybuch rakiety.",
-    opis: p => `Co <span class="umiej-lvl">10</span> s strzelasz rakietami w ilości <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> w najbliższego wroga. Każda zadaje <span class="umiej-dmg">${dmgMagiczne([0.15, 0.25, 0.35, 0.45, 0.5][p])}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">10</span> s strzelasz rakietami w ilości <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> w najbliższego wroga. Każda zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "INŻYNIERZY/wampir.png", kol: 1, wiersz: 2,
+    bonus: "Kradzież życia: 5%",
+    opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
+  }
+];
+
+const UMIEJETNOSCI_ZNIWIARZ = [
+  {
+    id: "elektryczna", nazwa: "Kosa", plik: "ŻNIWIARZ/kosa.png", kol: 0, wiersz: 0,
+    bonus: "Zabicie leczy za 4% max PŻ.",
+    opis: p => `Co <span class="umiej-lvl">11</span> s rzucasz kosą zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.5, 0.6, 0.7, 0.8][p])}</span> obrażeń magicznych. Kosa wraca zadając ponownie obrażenia.`
+  },
+  {
+    id: "ognista", nazwa: "Rozdarcie", plik: "ŻNIWIARZ/rozdarcie.png", kol: 1, wiersz: 0,
+    bonus: "Wrogowie giną przy 10% PŻ.",
+    opis: p => `Gdy wróg ginie jego dusza rozpada się na <span class="umiej-lvl">${[5, 7, 9, 11, 13][p]}</span> części zadając <span class="umiej-dmg">${dmgMagiczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń magicznych.`
+  },
+  {
+    id: "odlamkowa", nazwa: "Ściana bólu", plik: "ŻNIWIARZ/sciana.png", kol: 0, wiersz: 1,
+    bonus: "Stawiasz 2 ściany.",
+    opis: p => `Co <span class="umiej-lvl">15</span> s stawiasz ścianę na 10 s zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych i spowalniającą wrogów o 30% na 5 s. Szerokość: <span class="umiej-lvl">${[150, 250, 350, 450, 550][p]}</span>.`
+  },
+  {
+    id: "magiczna", nazwa: "Dusze", plik: "ŻNIWIARZ/dusze.png", kol: 1, wiersz: 1,
+    bonus: "Dusze nie zanikają.",
+    opis: p => `Wokół Ciebie krążą zagubione dusze w ilości <span class="umiej-lvl">${[5, 9, 13, 17, 21][p]}</span> zadające <span class="umiej-dmg">${dmgMagiczne([1, 1.5, 2, 2.5, 3][p])}</span> obrażeń magicznych. Po trafieniu dusza zanika na 5 s.`
+  },
+  {
+    id: "potrojna", nazwa: "Banshee", plik: "ŻNIWIARZ/banshee.png", kol: 0, wiersz: 2,
+    bonus: "Wypuszczasz 3 kule na raz.",
+    opis: p => `Co <span class="umiej-lvl">${[15, 14, 13, 12, 11][p]}</span> s wypuszczasz kulę zadającą <span class="umiej-dmg">${dmgMagiczne(1 / [7, 6.5, 6, 5.5, 5][p])}</span> co 0,1 s pobliskim wrogom, max <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> na raz.`
+  },
+  {
+    id: "wampiryczna", nazwa: "Wampiryzm", plik: "ŻNIWIARZ/wampiryzm.png", kol: 1, wiersz: 2,
     bonus: "Kradzież życia: 5%",
     opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
   }
@@ -251,15 +284,27 @@ const BRONIE = {
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   inzynier: {
-    nazwa: "Inżynier", nazwaAmunicji: "Narzędzia", ikona: "🔧",
-    zakresyBroni: { "Podstawowe obrażenia": { min: 3500, max: 5000 } },
+    nazwa: "Inżynier", nazwaAmunicji: "Skrzynka narzędziowa", ikona: "🔧",
+    zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "inzynier.png", amunicja: "inzynier2.png",
     umiejetnosci: UMIEJETNOSCI_INZYNIER,
-    // item amunicji: stały affix + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia)
-    affixyAmunicji: ["Szansa na kryta"],
+    // skrzynka narzędziowa: stały affix "Mechatronika" + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia)
+    affixyAmunicji: ["Mechatronika"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
     zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
+  },
+  zniwiarz: {
+    nazwa: "Żniwiarz", nazwaAmunicji: "Latarnia", ikona: "💀",
+    zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
+    bron: "bronkosa.png", amunicja: "latarnia.png",
+    umiejetnosci: UMIEJETNOSCI_ZNIWIARZ,
+    // Latarnia: stały affix "Nekromancja" + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia 0-33%)
+    affixyAmunicji: ["Nekromancja"],
+    mozliweAmunicji: AMUNICJA_MOZLIWE,
+    wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
+    zakresyAmunicji: { "Szybkość zaklęcia": { min: 0, max: 33 }, "Obrażenia umiejętności": { min: 0, max: 6 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   }
 };
@@ -319,7 +364,8 @@ const KLASY_WYBORU = [
   { klasa: "Żołnierz", bron: "pistolet" },
   { klasa: "Ninja", bron: "shuriken" },
   { klasa: "Szaman", bron: "pajak" },
-  { klasa: "Inżynier", bron: "inzynier" }
+  { klasa: "Inżynier", bron: "inzynier" },
+  { klasa: "Żniwiarz", bron: "zniwiarz" }
 ];
 
 /* Styl samej OKRĄGŁEJ ikony umiejętności "wyciętej" z kafelka: ten sam fragment grafiki co duża
@@ -414,7 +460,8 @@ const MODULY_KLAS = {
   pistolet: ["czyPistolet", "survivor-pistolet.js"],
   shuriken: ["czyShuriken", "survivor-shuriken.js"],
   pajak: ["czyPajak", "survivor-pajak.js"],
-  inzynier: ["czyInzynier", "survivor-inzynier.js"]
+  inzynier: ["czyInzynier", "survivor-inzynier.js"],
+  zniwiarz: ["czyZniwiarz", "survivor-zniwiarz.js"]
 };
 
 function brakujacyModulKlasy(id) {
@@ -458,7 +505,7 @@ function resetujWyborBroni() {
   ostatniaGranaBron = aktualnaBron;
 }
 
-/* Klawisze 1-6 wybierają klasę (kartę), gdy okno jest otwarte. */
+/* Klawisze 1-7 wybierają klasę (kartę), gdy okno jest otwarte. */
 document.addEventListener("keydown", event => {
   if (!wyborBroniOtwarty) return;
   const klasa = KLASY_WYBORU[Number(event.key) - 1];
