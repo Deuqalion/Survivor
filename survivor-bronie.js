@@ -196,7 +196,7 @@ const UMIEJETNOSCI_ZNIWIARZ = [
   {
     id: "ognista", nazwa: "Rozdarcie", plik: "ŻNIWIARZ/rozdarcie.png", kol: 1, wiersz: 0,
     bonus: "Wrogowie giną przy 10% PŻ.",
-    opis: p => `Gdy wróg ginie jego dusza rozpada się na <span class="umiej-lvl">${[5, 7, 9, 11, 13][p]}</span> części zadając <span class="umiej-dmg">${dmgMagiczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń magicznych.`
+    opis: p => `Gdy wróg ginie jego dusza rozpada się na <span class="umiej-lvl">${[2, 4, 6, 8, 10][p]}</span> części zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.5, 0.6, 0.7, 0.8][p])}</span> obrażeń magicznych.`
   },
   {
     id: "odlamkowa", nazwa: "Ściana bólu", plik: "ŻNIWIARZ/sciana.png", kol: 0, wiersz: 1,
@@ -206,7 +206,7 @@ const UMIEJETNOSCI_ZNIWIARZ = [
   {
     id: "magiczna", nazwa: "Dusze", plik: "ŻNIWIARZ/dusze.png", kol: 1, wiersz: 1,
     bonus: "Dusze nie zanikają.",
-    opis: p => `Wokół Ciebie krążą zagubione dusze w ilości <span class="umiej-lvl">${[5, 9, 13, 17, 21][p]}</span> zadające <span class="umiej-dmg">${dmgMagiczne([1, 1.5, 2, 2.5, 3][p])}</span> obrażeń magicznych. Po trafieniu dusza zanika na 5 s.`
+    opis: p => `Wokół Ciebie krążą zagubione dusze w ilości <span class="umiej-lvl">${[5, 9, 13, 17, 21][p]}</span> zadające <span class="umiej-dmg">${dmgMagiczne([1, 1.25, 1.5, 1.75, 2][p])}</span> obrażeń magicznych. Po trafieniu dusza zanika na 5 s.`
   },
   {
     id: "potrojna", nazwa: "Banshee", plik: "ŻNIWIARZ/banshee.png", kol: 0, wiersz: 2,
