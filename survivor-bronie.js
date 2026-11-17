@@ -191,17 +191,17 @@ const UMIEJETNOSCI_ZNIWIARZ = [
   {
     id: "elektryczna", nazwa: "Kosa", plik: "ŻNIWIARZ/kosa.png", kol: 0, wiersz: 0,
     bonus: "Zabicie leczy za 4% max PŻ.",
-    opis: p => `Co <span class="umiej-lvl">11</span> s rzucasz kosą zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.5, 0.6, 0.7, 0.8][p])}</span> obrażeń magicznych. Kosa wraca zadając ponownie obrażenia.`
+    opis: p => `Co 10 s rzucasz kosą zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.5, 0.6, 0.7, 0.8][p])}</span> obrażeń magicznych. Kosa wraca zadając o 20% więcej obrażeń.`
   },
   {
     id: "ognista", nazwa: "Rozdarcie", plik: "ŻNIWIARZ/rozdarcie.png", kol: 1, wiersz: 0,
     bonus: "Wrogowie giną przy 10% PŻ.",
-    opis: p => `Gdy wróg ginie jego dusza rozpada się na <span class="umiej-lvl">${[2, 4, 6, 8, 10][p]}</span> części zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.5, 0.6, 0.7, 0.8][p])}</span> obrażeń magicznych.`
+    opis: p => `Gdy wróg ginie jego dusza rozpada się na <span class="umiej-lvl">${[2, 4, 6, 8, 10][p]}</span> części zadając <span class="umiej-dmg">${dmgMagiczne([0.4, 0.47, 0.54, 0.61, 0.68][p])}</span> obrażeń magicznych.`
   },
   {
     id: "odlamkowa", nazwa: "Ściana bólu", plik: "ŻNIWIARZ/sciana.png", kol: 0, wiersz: 1,
     bonus: "Stawiasz 2 ściany.",
-    opis: p => `Co <span class="umiej-lvl">15</span> s stawiasz ścianę na 10 s zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych i spowalniającą wrogów o 30% na 5 s. Szerokość: <span class="umiej-lvl">${[150, 250, 350, 450, 550][p]}</span>.`
+    opis: p => `Co 15 s stawiasz ścianę na 10 s zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych i spowalniającą wrogów o 30% na 5 s. Spowolnieni dostają o 20% więcej obrażeń. Szerokość: <span class="umiej-lvl">${[150, 250, 350, 450, 550][p]}</span>.`
   },
   {
     id: "magiczna", nazwa: "Dusze", plik: "ŻNIWIARZ/dusze.png", kol: 1, wiersz: 1,
@@ -245,7 +245,7 @@ const BRONIE = {
     affixyAmunicji: ["Czarnoksięstwo"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 8 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   pistolet: {
@@ -256,7 +256,7 @@ const BRONIE = {
     affixyAmunicji: ["Destrukcja"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   shuriken: {
@@ -267,7 +267,7 @@ const BRONIE = {
     affixyAmunicji: ["Zręczność"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Wartość ataku": { min: 60, max: 300 }, "Obrażenia umiejętności": { min: 0, max: 6 } },
+    zakresyAmunicji: { "Wartość ataku": { min: 60, max: 300 }, "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Prędkość ataku: +35%"
   },
   pajak: {
@@ -280,7 +280,7 @@ const BRONIE = {
     affixyAmunicji: ["Jad"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   inzynier: {
@@ -292,7 +292,7 @@ const BRONIE = {
     affixyAmunicji: ["Mechatronika"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Obrażenia umiejętności": { min: 0, max: 6 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   },
   zniwiarz: {
@@ -300,11 +300,11 @@ const BRONIE = {
     zakresyBroni: { "Podstawowe obrażenia": { min: 3000, max: 4000 } },
     bron: "bronkosa.png", amunicja: "latarnia.png",
     umiejetnosci: UMIEJETNOSCI_ZNIWIARZ,
-    // Latarnia: stały affix "Nekromancja" + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia 0-33%)
+    // Latarnia: stały affix "Nekromancja" + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia 0-17%)
     affixyAmunicji: ["Nekromancja"],
     mozliweAmunicji: AMUNICJA_MOZLIWE,
     wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
-    zakresyAmunicji: { "Szybkość zaklęcia": { min: 0, max: 33 }, "Obrażenia umiejętności": { min: 0, max: 6 } },
+    zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
     ulepszenieAmunicji: "Szybkość zaklęcia: +17%"
   }
 };

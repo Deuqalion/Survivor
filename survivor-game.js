@@ -1480,6 +1480,12 @@ function znajdzNajblizszegoWrogaOd(cel, wykluczone = new Set()) {
    (pancerz działa), mogą krytować i przeszywać, ale NIE korzystają z trucizny i nie
    nakładają trucizny/krwawienia/omdlenia ani nie kradną życia.
    opcje.mnoznikSkilla = jaką część obrażeń głównej strzały zadaje (np. 0.2 = 20%). */
+/* Wróg "osłabiony" (np. Ściana bólu Żniwiarza): dostaje o 20% więcej obrażeń do czasu wygaśnięcia osłabienia. */
+const WROG_OSLABIONY_MNOZNIK = 1.2;
+function mnoznikOslabienia(wrog) {
+  return (wrog.oslabionyDoCzasu || 0) > czasWirt() ? WROG_OSLABIONY_MNOZNIK : 1;
+}
+
 function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia = 1, opcje = {}) {
   if (!cel || cel.hp <= 0) return 0;
 
@@ -1512,7 +1518,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
 
   const redukcja = 100 / (100 + pancerzEfektywny);
   const mnoznikOdpornosci = cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1;
-  const dmg = Math.round(dmgBazowe * mnoznikTrucizny * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci * mnoznikSkilla);
+  const dmg = Math.round(dmgBazowe * mnoznikTrucizny * mnoznikKryta * redukcja * mnoznikPrzebicia * mnoznikOdpornosci * mnoznikSkilla * mnoznikOslabienia(cel));
 
   cel.hp -= dmg;
 
@@ -1643,7 +1649,7 @@ function wykonajAtakMagiczny(cel, staty1, xZrodla, yZrodla, mnoznik = 1, opcje =
   // (Podstawowe obrażenia + zabici); opcje.podstawa podmienia "Podstawowe obrażenia" (np. 700 dla wybuchu Ognia)
   const podstawaObrazen = opcje.podstawa ?? (staty1.podstawoweObrażenia || 3000);
   const baza = (podstawaObrazen + zabiciDlaUmiejetnosci()) * mnoznik * (krytMagiczny ? mnoznikKrytuMagii : 1);
-  const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1);
+  const dmgBazowe = baza * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100) * (cel.odporny ? MNOZNIK_DMG_ODPORNEGO : 1) * mnoznikOslabienia(cel);
   const { dmg, dmgTrucizny, dmgWyswietlany } = obrazeniaMagiczneZTrucizna(cel, staty1, dmgBazowe);
 
   cel.hp -= dmg;
@@ -2070,13 +2076,18 @@ function pobierzCzasAtakuGracza() {
 }
 
 /*
-  Krwawienie w Survivorze: 8% maks. PŻ na sekundę przez 3 sekundy,
-  zadawane w tikach co 0,5s (6 tików po 4% maks. PŻ). Stałe są lokalne,
+  Krwawienie w Survivorze: 24% maks. PŻ rozłożone na 5 sekund (4,8% na sekundę),
+  zadawane w tikach co 0,5s (10 tików po 2,4% maks. PŻ). Stałe są lokalne,
   żeby nie ruszać KRWAWIENIE_* z config.js (współdzielone z areną 1v1).
 */
 const CZAS_TIKU_KRWAWIENIA_MS = 500;
-const KRWAWIENIE_TIK_PROCENT_HP = 0.04;
-const KRWAWIENIE_LICZBA_TIKOW = 6;
+// Krwawienie: 24% maks. PŻ wroga rozłożone na 5 s (10 tików co 0,5 s po 2,4%).
+// Wcześniej było to samo 24%, ale w 3 s (6 tików po 4%) — suma obrażeń się NIE zmieniła, tylko rozciągnęliśmy ją w czasie.
+const KRWAWIENIE_LICZBA_TIKOW = 10;
+const KRWAWIENIE_TIK_PROCENT_HP = 0.24 / KRWAWIENIE_LICZBA_TIKOW;
+// Wzmocnienie krwawienia (pp na sekundę) liczone jest względem dawnych 3 s, żeby jego SUMARYCZNY efekt też został ten sam
+// (np. +5% = +15 pp maks. PŻ łącznie), tylko rozłożony na 10 tików.
+const KRWAWIENIE_WZMOCNIENIE_REF_CZAS_S = 3;
 
 /*
   Odporny mob: 1% szans, że pojawiający się mob (melee / ranged / boss)
@@ -2112,9 +2123,9 @@ function aktualizujKrwawienieWrogow(teraz) {
     if (wrog.krwawienieTury <= 0) wrog.krwawienieOdpornyDo = teraz + KRWAWIENIE_ODPORNOSC_PO_ZAKONCZENIU_MS;
 
     const mnoznikOdpornosci = wrog.odporny ? MNOZNIK_DMG_ODPORNEGO : 1;
-    // Wzmocnienie krwawienia dodaje punkty procentowe NA SEKUNDĘ (np. 5% = +5 pp/s),
-    // więc na jeden tik (0,5s) przypada połowa: 4% + 2,5% = 6,5% maks. PŻ.
-    const procentTiku = KRWAWIENIE_TIK_PROCENT_HP + (wzmocnienieKrwawienia / 100) * (CZAS_TIKU_KRWAWIENIA_MS / 1000);
+    // Wzmocnienie krwawienia: +x pp maks. PŻ NA SEKUNDĘ w dawnym 3-sekundowym krwawieniu, czyli +3x pp łącznie;
+    // rozkładamy te punkty po równo na wszystkie tiki (np. +5% = +15 pp łącznie = +1,5 pp na tik).
+    const procentTiku = KRWAWIENIE_TIK_PROCENT_HP + (wzmocnienieKrwawienia / 100) * KRWAWIENIE_WZMOCNIENIE_REF_CZAS_S / KRWAWIENIE_LICZBA_TIKOW;
     const dmg = Math.round(wrog.maxHp * procentTiku * mnoznikOdpornosci * (wrog.silaKrwawienia ?? 1));
     wrog.hp -= dmg;
     rundaStaty.obrazenia += dmg;

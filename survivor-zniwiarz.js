@@ -20,17 +20,18 @@ const ZNIW_PREDKOSC_POCISKU = 900;
 const ZNIW_PROMIEN_TRAFIENIA = 10;
 
 /* Kosa */
-const KOSA_CO_S = 11;
+const KOSA_CO_S = 10;
 const KOSA_MNOZNIK = [0.4, 0.5, 0.6, 0.7, 0.8];
 const KOSA_PROMIEN = 70;                     // szerokość 140 px
 const KOSA_PREDKOSC = 650;
 const KOSA_PREDKOSC_POWROTU = 800;
 const KOSA_ZWROTNOSC = 5;                    // rad/s (powrót: skręca ku graczowi)
+const KOSA_BONUS_POWROTU = 1.2;              // wracając kosa zadaje +20% obrażeń
 const KOSA_LECZENIE_PROCENT = 0.04;          // max poziom: zabicie Kosą leczy 4% max PŻ
 
 /* Rozdarcie */
 const ROZDARCIE_CZESCI = [2, 4, 6, 8, 10];
-const ROZDARCIE_MNOZNIK = [0.4, 0.5, 0.6, 0.7, 0.8];
+const ROZDARCIE_MNOZNIK = [0.4, 0.47, 0.54, 0.61, 0.68];
 const ROZDARCIE_PRZEZROCZYSTOSC = 0.8;         // duszki lekko transparentne (80% widoczności)
 const ROZDARCIE_PREDKOSC = 380;
 const ROZDARCIE_MAX_DYSTANS = 650;
@@ -47,6 +48,7 @@ const SCIANA_MNOZNIK = 1;
 const SCIANA_TIK_MS = 1000;
 const SCIANA_SPOWOLNIENIE = 0.3;
 const SCIANA_CZAS_SPOWOLNIENIA_MS = 5000;
+const SCIANA_PODATNOSC_MNOZNIK = 1.2;        // spowolnieni wrogowie dostają o 20% więcej obrażeń
 
 /* Dusze (krążące) */
 const DUSZE_LICZBA = [5, 9, 13, 17, 21];
@@ -201,7 +203,8 @@ function aktualizujKosy(dtMs, staty1) {
       if (w.hp <= 0 || k.trafieni.has(w.id)) continue;
       if (Math.hypot(w.x - k.x, w.y - k.y) > KOSA_PROMIEN + promienWroga(w) * 0.3) continue;
       k.trafieni.add(w.id);
-      wykonajAtakMagiczny(w, staty1, k.x, k.y, k.mnoznik, { bezLinii: true, zrodlo: "elektryczna" });
+      const mnoznikKosy = k.mnoznik * (k.faza === "powrot" ? KOSA_BONUS_POWROTU : 1);
+      wykonajAtakMagiczny(w, staty1, k.x, k.y, mnoznikKosy, { bezLinii: true, zrodlo: "elektryczna" });
       if (lecznicza && w.hp <= 0) zniwUlecz(KOSA_LECZENIE_PROCENT);   // max: zabicie Kosą leczy 4% max PŻ
     }
     return true;
@@ -300,6 +303,7 @@ function aktualizujSciany(dtMs, staty1) {
       // spowolnienie 30% na 5 s (odświeżane, póki wróg stoi w ścianie)
       w.spowolnionyDoCzasu = Math.max(w.spowolnionyDoCzasu || 0, czasWirt() + SCIANA_CZAS_SPOWOLNIENIA_MS);
       w.silaSpowolnienia = Math.max(w.silaSpowolnienia || 0, SCIANA_SPOWOLNIENIE);
+      w.oslabionyDoCzasu = Math.max(w.oslabionyDoCzasu || 0, czasWirt() + SCIANA_CZAS_SPOWOLNIENIA_MS);   // +20% otrzymywanych obrażeń
       if (tik) wykonajAtakMagiczny(w, staty1, s.x, s.y, SCIANA_MNOZNIK, { bezLinii: true, zrodlo: "odlamkowa" });   // obrażenia co 1 s
     }
     return s.zycie > 0;
@@ -425,7 +429,7 @@ function aktualizujBanshee(dtMs, staty1) {
       const baza = ((staty1.podstawoweObrażenia || 3000) + zabiciDlaUmiejetnosci()) / BANSHEE_DZIELNIK[b.p]
         * (1 + (staty1.obrazeniaUmiejetnosci || 0) / 100);
       w.forEach(e => {
-        const dmg = Math.round(baza * (e.odporny ? MNOZNIK_DMG_ODPORNEGO : 1));
+        const dmg = Math.round(baza * (e.odporny ? MNOZNIK_DMG_ODPORNEGO : 1) * mnoznikOslabienia(e));
         if (dmg <= 0) return;
         e.hp -= dmg;
         rundaStaty.obrazenia += dmg;
