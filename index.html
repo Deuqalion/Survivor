@@ -30,6 +30,7 @@
       </div>
 
       <div id="staty-gracza"></div>
+      <div id="wskrzeszenia-serca" class="wskrzeszenia-serca"></div>
 
     </section>
 
@@ -41,7 +42,7 @@
         <div class="pasek-hp-wrapper">
           <div class="pasek-hp-etykieta">
             <span>Twoje PŻ</span>
-            <span id="hp-tekst-gracz">0 / 0</span>
+            <span><span id="hp-tekst-gracz">0 / 0</span> <span id="hp-regen" class="hp-regen"></span></span>
           </div>
           <div class="pasek-hp-tlo">
             <div id="hp-fill-gracz" class="pasek-hp-fill"></div>
@@ -70,7 +71,7 @@
 
           <div class="porazka-etykieta">ZADANE OBRAŻENIA:</div>
           <div id="por-suma" class="porazka-suma">0</div>
-          <div class="porazka-podzial"><span><span id="por-fiz" class="porazka-fiz">0</span> <span id="por-fiz-p" class="porazka-procent">(0%)</span></span><span><span id="por-mag" class="porazka-mag">0</span> <span id="por-mag-p" class="porazka-procent">(0%)</span></span></div>
+          <div class="porazka-podzial"><span><span id="por-fiz" class="porazka-fiz">0</span> <span id="por-fiz-p" class="porazka-procent">(0%)</span></span><span><span id="por-krw-podzial" class="porazka-krw">0</span> <span id="por-krw-podzial-p" class="porazka-procent">(0%)</span></span><span><span id="por-mag" class="porazka-mag">0</span> <span id="por-mag-p" class="porazka-procent">(0%)</span></span></div>
 
           <div class="porazka-blok">
             <div class="porazka-kolumny">
@@ -191,6 +192,7 @@
   <script src="survivor-pajak.js"></script>
   <script src="survivor-inzynier.js"></script>
   <script src="survivor-zniwiarz.js"></script>
+  <script src="survivor-lowca.js"></script>
   <script src="survivor-pistolet.js"></script>
   <script src="survivor-shuriken.js"></script>
   <script src="survivor-umiejetnosci.js"></script>

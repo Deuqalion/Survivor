@@ -888,7 +888,7 @@ body { transform: none; }
 .porazka-podzial {
   display: flex;
   justify-content: center;
-  gap: 48px;
+  gap: 34px;
   margin-top: 12px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(255, 215, 0, 0.25);
@@ -903,6 +903,7 @@ body { transform: none; }
 .porazka-wartosc .porazka-procent { font-size: 22px; }
 .porazka-fiz { color: #ff9a2e; }
 .porazka-mag { color: #6ec8ff; }
+.porazka-krw { color: #ff3b3b; }
 .porazka-podzial-sep { margin: 0 4px; }
 
 /* odstęp między krytami/przeszywkami a TRUCIE/KRWAWIENIE */
@@ -990,4 +991,24 @@ body { transform: none; }
 @keyframes porazkaPuls {
   0%, 100% { text-shadow: 0 0 18px rgba(255, 190, 0, 0.6), 3px 5px 6px #000; }
   50%      { text-shadow: 0 0 36px rgba(255, 210, 0, 1),   3px 5px 6px #000; }
+}
+
+/* Serca = dostępne Wskrzeszenia (pod tabelą statystyk) */
+.wskrzeszenia-serca {
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 6px;
+  min-height: 38px;
+  text-shadow: 1px 2px 3px #000;
+}
+
+/* Regeneracja PŻ na końcu górnego paska życia */
+.hp-regen {
+  margin-left: 6px;
+  color: #7dff9b;
+  font-size: 0.85em;
+  text-shadow: 1px 1px 3px #000;
 }

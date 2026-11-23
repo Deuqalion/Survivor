@@ -17,7 +17,7 @@ const MOB_DMG_RANGED_MAX = 26250;
 
 const BOSS_PZ_STALE = 100000;
 const BOSS_PZ_WZROST_NA_ARCYBOSSA = 3125;
-const BOSS_PANCERZ_STALE = 100;
+const BOSS_PANCERZ_STALE = 40;
 const BOSS_PANCERZ_WZROST_NA_ARCYBOSSA = 20;
 const BOSS_PANCERZ_MAX = 200;
 const BOSS_DMG_STALE = 30000;
@@ -25,7 +25,7 @@ const BOSS_DMG_WZROST_NA_ARCYBOSSA = 2500;
 const BOSS_DMG_MAX = 40000;
 
 const ARCYBOSS_PZ = 120000;
-const ARCYBOSS_PANCERZ = 250;
+const ARCYBOSS_PANCERZ = 210;
 const ARCYBOSS_DMG_POCISK = 40000;
 const ARCYBOSS_LICZBA_POCISKOW = 16;
 const ARCYBOSS_CZAS_SALWY_MS = 2500;
@@ -38,7 +38,8 @@ const ARCYBOSS_DMG_MAX = 130000;
 const ARCYBOSS_POCISKI_PRZYROST = 2;
 const ARCYBOSS_POCISKI_MAX = 24;
 
-const UPG_BRON_OBR_UMIEJETNOSCI = 6;  // ulepszenie broni: +6% Obrażeń umiejętności
+const REGENERACJA_PZ_BAZOWA = 1;   // wbudowana regeneracja: 1% maks. PŻ na sekundę
+const UPG_BRON_OBR_UMIEJETNOSCI = 10;  // ulepszenie broni: +10% Obrażeń umiejętności
 const ARCYBOSSY_DO_ULEPSZENIA = 4;
 const ARCYBOSSY_DO_SZYBSZEGO_SPAWNU = 7;   // po 7. pokonanym Arcybossie skok do szybszego spawnu
 const PROG_FALI_ARCYBOSSA_PO_ULEPSZENIU = 200;
@@ -183,7 +184,7 @@ function obliczStatystyki(gracz) {
   let szybkoscZaklecia = 0;
   let nekromancja = 0;
   let predkoscRuchuBonus = 0;
-  let regeneracjaPzSek = 0;
+  let regeneracjaPzSek = REGENERACJA_PZ_BAZOWA;   // wbudowane 1%/s; ulepszenie Hełmu dodaje +5
   let wskrzeszenieDostepne = false;
   let obrazeniaObszaroweDostepne = false;
 
@@ -231,6 +232,7 @@ function obliczStatystyki(gracz) {
       else if (nazwa === "Kradzież życia" || nazwa === "Kradzież życia: 5%") kradziezZycia += val;
       else if (nazwa === "Ulepszenie broni") { obrazeniaUmiejetnosci += UPG_BRON_OBR_UMIEJETNOSCI; }
       else if (nazwa === "Prędkość ataku" || nazwa === "Prędkość ataku: +35%") predkoscAtaku += val;
+      else if (nazwa === "Zwinność") { predkoscAtaku += val; predkoscRuchuBonus += val; }   // Bełty Łowcy: Prędkość ataku i Prędkość ruchu
       else if (nazwa === "Zręczność") predkoscAtaku += val;            // Shuriken2: pasywka = Prędkość ataku
       else if (nazwa === "Szybkość zaklęcia" || nazwa === "Szybkość zaklęcia: +17%") szybkoscZaklecia += val;
       else if (nazwa === "Nekromancja") nekromancja += val;           // Latarnia Żniwiarza: zwiększa Z umiejętności
@@ -260,6 +262,9 @@ function obliczStatystyki(gracz) {
   if (gracz === 1 && typeof poziomUmiejetnosci === "function") {
     if (poziomUmiejetnosci("wampiryczna") >= MAX_POZIOM_UMIEJETNOSCI) kradziezZycia += 5;
   }
+
+  // Precyzja Łowcy: dodatkowe Wzmocnienie krytyczne
+  if (gracz === 1 && typeof bonusWzmocnieniaKrytycznegoLowcy === "function") wzmocnienieKrytyczne += bonusWzmocnieniaKrytycznegoLowcy();
 
   const finalnePz = Math.round((pz + dodatkowePz) * (1 + wzmocnieniePz / 100));
   const finalnyPancerz = Math.round(pancerz * (1 + wzmocnieniePancerza / 100));
@@ -930,6 +935,12 @@ function aktualizujPasekPostaci() {
   const procent = postac.maxHp > 0 ? Math.max(0, Math.min(100, (postac.hp / postac.maxHp) * 100)) : 0;
   fill.style.width = `${procent}%`;
   tekst.textContent = `${Math.round(Math.max(0, postac.hp)).toLocaleString("pl-PL")} / ${Math.round(postac.maxHp).toLocaleString("pl-PL")}`;
+
+  const regenEl = document.getElementById("hp-regen");
+  if (regenEl) {
+    const reg = (stan[1].staty && stan[1].staty.regeneracjaPzSek) || 0;
+    regenEl.textContent = `${reg.toLocaleString("pl-PL", { maximumFractionDigits: 1 })}%/s`;
+  }
 }
 
 function formatCzasuGry(ms) {
@@ -1417,6 +1428,7 @@ function zadajObrazeniaPostaci(typWroga, dmgPocisku) {
         wrog.ogluszonyDoCzasu = teraz + 3000;
       });
       wskrzeszenieDoCzasu = teraz + 3000;
+      if (typeof renderujSercaWskrzeszen === "function") renderujSercaWskrzeszen();
 
       log("✨ WSKRZESZENIE! Przywrócono 75% PŻ i unieruchomiono wrogów na 3s!", "log-zwyciestwo");
       pokazOgloszenie("Wskrzeszenie!", "ogloszenie-item");
@@ -1498,21 +1510,26 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     podstObrazenia + ROZRZUT_PODSTAWOWYCH_OBRAZEN
   );
 
-  const dmgBazowe = (losowePodstawoweObrazenia + (staty1.wartoscAtaku || 0) + bonusObrazenZZabojstw());
+  // opcje.dmgBazoweNadpisane: własna baza obrażeń (np. % zdrowia wroga, Łowca); opcje.bezKryta: nie może krytować
+  const dmgBazowe = (opcje.dmgBazoweNadpisane !== undefined)
+    ? opcje.dmgBazoweNadpisane
+    : (losowePodstawoweObrazenia + (staty1.wartoscAtaku || 0) + bonusObrazenZZabojstw());
 
   const truciznaAktywna = !poboczny && cel.zatruteAtaki > 0;
   if (truciznaAktywna) cel.zatruteAtaki -= 1;
   const mnoznikTrucizny = truciznaAktywna ? 1 + (TRUCIZNA_BONUS + ((staty1.obrazeniaTrucizny || 0) / 100)) * (cel.silaTrucizny ?? 1) : 1;
 
-  const kryt = losujProcent() < (staty1.kryt || 0);
+  const kryt = !opcje.bezKryta && losujProcent() < (staty1.kryt || 0);
   const mnoznikKryta = kryt ? 2 + ((staty1.obrazeniaKrytyczne || 0) / 100) : 1;
 
   const szansaNaPrzeszywke = (staty1.diamentowaStrzala || 0) > 0 ? 100 : (staty1.przeszywka || 0);
-  const przeszywkaAktywna = losujProcent() < szansaNaPrzeszywke;
+  // opcje.wymusPrzeszywke: 100% szansy, ale siła przeszywki zostaje taka, jaką mamy (Szansa na przeszywkę * mnożnik)
+  const przeszywkaAktywna = !!opcje.wymusPrzeszywke || losujProcent() < szansaNaPrzeszywke;
   let pancerzEfektywny = cel.pancerz;
 
   if (przeszywkaAktywna) {
-    const ignorujProcent = Math.min(100, szansaNaPrzeszywke * MNOZNIK_PRZESZYWKI);
+    const silaPrzeszywki = opcje.wymusPrzeszywke ? (staty1.przeszywka || 0) : szansaNaPrzeszywke;
+    const ignorujProcent = Math.min(100, silaPrzeszywki * MNOZNIK_PRZESZYWKI);
     pancerzEfektywny = cel.pancerz * (1 - ignorujProcent / 100);
   }
 
@@ -1527,6 +1544,7 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
   if (opcje.zrodloDmg) dodajDmgUmiejetnosci(opcje.zrodloDmg, dmg);   // np. Ninjutsu / Rykoszet Shurikena
   if (kryt) rundaStaty.kryty += 1;
   if (przeszywkaAktywna) rundaStaty.przeszywki += 1;
+  if (opcje.wynik) { opcje.wynik.kryt = kryt; opcje.wynik.przeszywka = przeszywkaAktywna; opcje.wynik.dmg = dmg; }   // odczyt dla umiejętności (np. Precyzja Łowcy)
   if (dmg > rundaStaty.najwiekszyCios) rundaStaty.najwiekszyCios = dmg;
 
   let dmgWyswietlany = dmg;
@@ -1544,7 +1562,8 @@ function wykonajPojedynczyAtak(cel, staty1, xZrodla, yZrodla, mnoznikPrzebicia =
     kryt,
     przeszywka: przeszywkaAktywna,
     xZrodla,
-    yZrodla
+    yZrodla,
+    przesuniecie: opcje.przesuniecieDmg   // np. dodatkowe trafienia Łowcy: liczba obok wroga, nie na zwykłym ataku
   });
 
   // Kradzież życia (także od bocznych strzał Potrójnej)
@@ -1771,6 +1790,8 @@ function atakGracza() {
   if (typeof czyInzynier === "function" && czyInzynier()) { atakInzyniera(cel, staty1); return; }
   // Żniwiarz: własny atak i umiejętności — survivor-zniwiarz.js
   if (typeof czyZniwiarz === "function" && czyZniwiarz()) { atakZniwiarza(cel, staty1); return; }
+  // Łowca: własny atak i umiejętności — survivor-lowca.js
+  if (typeof czyLowca === "function" && czyLowca()) { atakLowcy(cel, staty1); return; }
 
   const dx = cel.x - postac.x;
   const dy = cel.y - postac.y;
@@ -1946,6 +1967,7 @@ function aktualizujPociskiGracza(dtMs) {
     if (typeof jestPociskPajaka === "function" && jestPociskPajaka(pocisk)) return aktualizujPociskPajaka(pocisk, dtMs, staty1);
     if (typeof jestPociskInzyniera === "function" && jestPociskInzyniera(pocisk)) return aktualizujPociskInzyniera(pocisk, dtMs, staty1);
     if (typeof jestPociskZniwiarza === "function" && jestPociskZniwiarza(pocisk)) return aktualizujPociskZniwiarza(pocisk, dtMs, staty1);
+    if (typeof jestPociskLowcy === "function" && jestPociskLowcy(pocisk)) return aktualizujPociskLowcy(pocisk, dtMs, staty1);
     pocisk.x += pocisk.dx * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
     pocisk.y += pocisk.dy * PREDKOSC_STRZALY_GRACZA * (dtMs / 1000);
 
@@ -2072,19 +2094,20 @@ function czasUmiejetnosciMs(sekundy) {
 function pobierzCzasAtakuGracza() {
   const staty1 = stan[1].staty;
   const predkoscAtaku = staty1 ? (staty1.predkoscAtaku || 0) : 0;
-  return CZAS_ATAKU_GRACZA_MS / (1 + predkoscAtaku / 100);
+  const bonusChwilowy = (typeof bonusPredkosciAtakuLowcy === "function") ? bonusPredkosciAtakuLowcy() : 0;   // Precyzja Łowcy
+  return CZAS_ATAKU_GRACZA_MS / (1 + (predkoscAtaku + bonusChwilowy) / 100);
 }
 
 /*
-  Krwawienie w Survivorze: 24% maks. PŻ rozłożone na 5 sekund (4,8% na sekundę),
-  zadawane w tikach co 0,5s (10 tików po 2,4% maks. PŻ). Stałe są lokalne,
+  Krwawienie w Survivorze: 20% maks. PŻ rozłożone na 5 sekund (4% na sekundę),
+  zadawane w tikach co 0,5s (10 tików po 2% maks. PŻ). Stałe są lokalne,
   żeby nie ruszać KRWAWIENIE_* z config.js (współdzielone z areną 1v1).
 */
 const CZAS_TIKU_KRWAWIENIA_MS = 500;
-// Krwawienie: 24% maks. PŻ wroga rozłożone na 5 s (10 tików co 0,5 s po 2,4%).
+// Krwawienie: 20% maks. PŻ wroga rozłożone na 5 s (10 tików co 0,5 s po 2%).
 // Wcześniej było to samo 24%, ale w 3 s (6 tików po 4%) — suma obrażeń się NIE zmieniła, tylko rozciągnęliśmy ją w czasie.
 const KRWAWIENIE_LICZBA_TIKOW = 10;
-const KRWAWIENIE_TIK_PROCENT_HP = 0.24 / KRWAWIENIE_LICZBA_TIKOW;
+const KRWAWIENIE_TIK_PROCENT_HP = 0.20 / KRWAWIENIE_LICZBA_TIKOW;
 // Wzmocnienie krwawienia (pp na sekundę) liczone jest względem dawnych 3 s, żeby jego SUMARYCZNY efekt też został ten sam
 // (np. +5% = +15 pp maks. PŻ łącznie), tylko rozłożony na 10 tików.
 const KRWAWIENIE_WZMOCNIENIE_REF_CZAS_S = 3;
@@ -2327,8 +2350,8 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
 
   efekty.push({
     typ: "tekst",
-    x: x + 8,
-    y: y - 12,
+    x: x + 8 + ((opcje.przesuniecie && opcje.przesuniecie.x) || 0),
+    y: y - 12 + ((opcje.przesuniecie && opcje.przesuniecie.y) || 0),
     tekst: `${prefix}${dmg.toLocaleString("pl-PL")}`,
     kolor: styl.kolor,
     rozmiar: styl.rozmiar,
@@ -2339,8 +2362,8 @@ function dodajEfektAtaku(x, y, dmg, opcje) {
   if (opcje.dmgTrucizny > 0) {
     efekty.push({
       typ: "tekst",
-      x: x + 8,
-      y: y - 12 + styl.rozmiar + 4,
+      x: x + 8 + ((opcje.przesuniecie && opcje.przesuniecie.x) || 0),
+      y: y - 12 + styl.rozmiar + 4 + ((opcje.przesuniecie && opcje.przesuniecie.y) || 0),
       tekst: `${opcje.dmgTrucizny.toLocaleString("pl-PL")}`,
       kolor: KOLOR_TRUCIZNA,
       rozmiar: Math.max(13, styl.rozmiar - 3),
@@ -2508,6 +2531,7 @@ function rysujGre() {
   });
 
   if (typeof rysujZniwiarzaNaWierzchu === "function") rysujZniwiarzaNaWierzchu();   // kosy, duszki, dusze, banshee
+  if (typeof rysujEfektyLowcy === "function") rysujEfektyLowcy();                   // obwódki Pogromcy, iskry, błyski
 
   pociski.forEach(p => {
     if (p.typWroga === "arcyboss") {
@@ -2546,6 +2570,7 @@ function rysujGre() {
     if (typeof rysujPociskPajaka === "function" && rysujPociskPajaka(p)) return;
     if (typeof rysujPociskInzyniera === "function" && rysujPociskInzyniera(p)) return;
     if (typeof rysujPociskZniwiarza === "function" && rysujPociskZniwiarza(p)) return;
+    if (typeof rysujPociskLowcy === "function" && rysujPociskLowcy(p)) return;
     if (p.typ === "magiczna") {
       // fioletowa łza, nieco większa od zwykłej strzały: okrągły czubek z zaostrzonym ogonem
       const r = 7;
@@ -2838,6 +2863,7 @@ function petlaGry(teraz) {
   if (typeof aktualizujPajaka === "function") aktualizujPajaka(dtMs);
   if (typeof aktualizujInzyniera === "function") aktualizujInzyniera(dtMs);
   if (typeof aktualizujZniwiarza === "function") aktualizujZniwiarza(dtMs);
+  if (typeof aktualizujLowce === "function") aktualizujLowce(dtMs);
 
   aktualizujWrogowZBlokowaniem(dtMs, czasWirtualny);
   rozsunWrogow(czasWirtualny);
@@ -2884,6 +2910,7 @@ function rozpocznijGre() {
   if (typeof resetujPajaka === "function") resetujPajaka();
   if (typeof resetujInzyniera === "function") resetujInzyniera();
   if (typeof resetujZniwiarza === "function") resetujZniwiarza();
+  if (typeof resetujLowce === "function") resetujLowce();
   if (typeof resetujUmiejetnosci === "function") resetujUmiejetnosci(); // monety i umiejętności od zera
   rundaStaty = nowaRundaStaty();
   ukryjEkranKoncowy();
@@ -3014,7 +3041,10 @@ function pokazEkranKoncowy(wygrana) {
   overlay.classList.toggle("wygrana", !!wygrana);
 
   const magiczne = rs.magiczne || 0;
-  const fizyczne = Math.max(0, rs.obrazenia - magiczne);
+  const krwawienie = rs.krwawienie || 0;
+  const fizyczne = Math.max(0, rs.obrazenia - magiczne - krwawienie);   // krwawienie liczone osobno
+  ustawTekstEkranu("por-krw-podzial", fmtLiczbaPL(krwawienie));
+  ustawTekstEkranu("por-krw-podzial-p", `(${fmtProcentOd(krwawienie, rs.obrazenia)})`);
   ustawTekstEkranu("por-fiz", fmtLiczbaPL(fizyczne));
   ustawTekstEkranu("por-fiz-p", `(${fmtProcentOd(fizyczne, rs.obrazenia)})`);
   ustawTekstEkranu("por-mag", fmtLiczbaPL(magiczne));

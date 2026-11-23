@@ -13,7 +13,7 @@
    ============================================================ */
 
 /* Zwykły atak */
-const SZPILKA_DLUGOSC = 24;                // długość pocisku wieżyczki (połowa wbija się w wroga)
+const SZPILKA_DLUGOSC = 24;                // długość pocisku wieżyczki
 const INZ_PREDKOSC_POCISKU = 900;
 const INZ_PROMIEN_TRAFIENIA = 10;
 
@@ -35,14 +35,8 @@ const DZIALKO_WZMOCNIONY_OBRAZENIA = 2;     // 2x więcej obrażeń, przebija wr
 /* Wieżyczki */
 const WIEZYCZKA_CO_MS = 1500;               // max poziom: 750 ms
 const WIEZYCZKA_PREDKOSC = 1500;
-const WIEZYCZKA_MNOZNIK = [0.6, 0.7, 0.8, 0.9, 1];
+const WIEZYCZKA_MNOZNIK = [0.5, 0.55, 0.6, 0.65, 0.7];   // (PO+Z) * mnożnik, obrażenia magiczne
 const WIEZYCZKA_ZASIEG = 450;
-const WIEZYCZKA_REDUKCJA_PANCERZA = 0.08;      // każdy pocisk: -8% pancerza wroga
-const WIEZYCZKA_MAX_REDUKCJA_PANCERZA = 0.4;   // maks. -40%
-const WIEZYCZKA_CZAS_WBICIA_MS = 5000;         // jak długo szpilka tkwi w wrogu (wizualnie)
-const WIEZYCZKA_MAX_WBITYCH = 6;               // maks. widocznych szpilek w jednym wrogu
-
-/* Kolczatki */
 const KOLCZATKI_CO_S = 5;
 const KOLCZATKI_CZAS_S = [28, 36, 44, 52, 60];
 const KOLCZATKI_KOLCE = [4, 6, 8, 10, 12];
@@ -69,7 +63,7 @@ const RAKIETA_ODSTEP_STARTU_MS = 35;       // krótki odstęp między wystrzała
 const RAKIETA_SZANSA_WYBUCHU = 33;          // max poziom
 const KOLOR_WYBUCHU_RAKIETY = "255, 150, 50";
 
-const INZ_TYPY_POCISKOW = ["inz", "plazma", "szpilka", "szpilkaWbita", "rakieta"];
+const INZ_TYPY_POCISKOW = ["inz", "plazma", "szpilka", "rakieta"];
 
 let inzDzialka = [];
 let inzWiezyczki = [];
@@ -79,10 +73,6 @@ let inzGryzienia = [];                       // aktywne "podgryzania" (DoT) na w
 let inzKolczatkiMs = 0;
 let inzGryzakiMs = 0;
 let inzRakietyMs = 0;
-/* Pociski tworzone W TRAKCIE aktualizacji pocisków (wbite szpilki) nie mogą trafiać od razu do pociskiGracza —
-   aktualizujPociskiGracza podmienia tę tablicę wynikiem filter() — więc dołączamy je w następnej klatce. */
-let inzKolejkaPociskow = [];
-
 function czyInzynier() {
   return typeof aktualnaBron !== "undefined" && aktualnaBron === "inzynier";
 }
@@ -97,7 +87,6 @@ function resetujInzyniera() {
   inzKolczatki = [];
   inzGryzaki = [];
   inzGryzienia = [];
-  inzKolejkaPociskow = [];
   inzKolczatkiMs = KOLCZATKI_CO_S * 1000;
   inzGryzakiMs = GRYZAKI_CO_S * 1000;
   inzRakietyMs = RAKIETY_CO_S * 1000;
@@ -167,23 +156,6 @@ function strzalWiezyczki(w, cel) {
     typ: "szpilka", x: w.x + (dx / dl) * 18, y: w.y + (dy / dl) * 18, dx: dx / dl, dy: dy / dl, trafieni: new Set()
   });
   w.kat = Math.atan2(dy, dx);
-}
-
-/* Szpilka wbija się w wroga (połowa długości tkwi w środku) i redukuje jego pancerz o 8% (max 40%). */
-function wbijSzpilke(w, pk) {
-  if (w.pancerzBazowy === undefined) w.pancerzBazowy = w.pancerz || 0;
-  w.redukcjaPancerza = Math.min(WIEZYCZKA_MAX_REDUKCJA_PANCERZA, (w.redukcjaPancerza || 0) + WIEZYCZKA_REDUKCJA_PANCERZA);
-  w.pancerz = w.pancerzBazowy * (1 - w.redukcjaPancerza);
-
-  const dl = SZPILKA_DLUGOSC;
-  const r = promienWroga(w);
-  // grot wbity na pół długości w obrys wroga od strony strzelającego
-  const tipX = w.x - pk.dx * (r - dl / 2), tipY = w.y - pk.dy * (r - dl / 2);
-  const wbita = { typ: "szpilkaWbita", wrog: w, ox: tipX - w.x, oy: tipY - w.y, dx: pk.dx, dy: pk.dy, zycie: WIEZYCZKA_CZAS_WBICIA_MS, x: tipX, y: tipY };
-  w.wbiteSzpilki = (w.wbiteSzpilki || []).filter(s => s.zycie > 0);
-  w.wbiteSzpilki.push(wbita);
-  while (w.wbiteSzpilki.length > WIEZYCZKA_MAX_WBITYCH) w.wbiteSzpilki.shift().zycie = 0;
-  inzKolejkaPociskow.push(wbita);
 }
 
 /* ---------- KOLCZATKI ---------- */
@@ -378,10 +350,6 @@ function trafienieRakiety(r, cel, staty1) {
 /* ---------- pętla ---------- */
 
 function aktualizujInzyniera(dtMs) {
-  if (inzKolejkaPociskow.length) {
-    pociskiGracza.push(...inzKolejkaPociskow);
-    inzKolejkaPociskow = [];
-  }
   const staty1 = stan[1].staty;
   // struktury istnieją tylko w tej klasie
   if (!czyInzynier() || !staty1) return;
@@ -497,21 +465,11 @@ function aktualizujPociskInzyniera(p, dtMs, staty1) {
           if (w.hp <= 0 || pk.trafieni.has(w.id)) continue;
           if (Math.hypot(w.x - pk.x, w.y - pk.y) > promienWroga(w) + 8) continue;
           pk.trafieni.add(w.id);
-          // fizyczne: CO * mnożnik; tylko kryt i przeszywka, bez trucizny/krwawienia/omdlenia
-          wykonajPojedynczyAtak(w, staty1, pk.x, pk.y, 1, { bezEfektow: true, mnoznikSkilla: WIEZYCZKA_MNOZNIK[pWiez], zrodloDmg: "potrojna" });
-          if (w.hp > 0) wbijSzpilke(w, pk);               // szpilka "wbija się" i obniża pancerz wroga
+          // obrażenia magiczne: (PO+Z) * mnożnik * (1 + OU); pocisk przebija wrogów
+          wykonajAtakMagiczny(w, staty1, pk.x, pk.y, WIEZYCZKA_MNOZNIK[pWiez], { bezLinii: true, zrodlo: "potrojna" });
         }
         return false;                               // przebija wrogów
       });
-    }
-
-    case "szpilkaWbita": {
-      // tkwi w wrogu i porusza się razem z nim, dopóki żyje (lub minie czas)
-      p.zycie -= dtMs;
-      if (p.zycie <= 0 || !p.wrog || p.wrog.hp <= 0) return false;
-      p.x = p.wrog.x + p.ox;
-      p.y = p.wrog.y + p.oy;
-      return true;
     }
 
     case "rakieta": {
@@ -792,35 +750,6 @@ function rysujPociskInzyniera(p) {
       ctx.moveTo(xT + px * 4.2, yT + py * 4.2);
       ctx.lineTo(xT - px * 4.2, yT - py * 4.2);
       ctx.lineWidth = 2.1;
-      ctx.stroke();
-      ctx.restore();
-      return true;
-    }
-
-    case "szpilkaWbita": {
-      // wbita szpilka: grot w środku, na zewnątrz wystaje druga połowa z poprzeczką
-      const dl = SZPILKA_DLUGOSC / 2;
-      const px = -p.dy, py = p.dx;
-      const xT = p.x - p.dx * dl, yT = p.y - p.dy * dl;
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(xT, yT);
-      ctx.lineTo(p.x, p.y);
-      ctx.lineWidth = 2.6;
-      ctx.strokeStyle = "#2b2f38";
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(xT, yT);
-      ctx.lineTo(p.x, p.y);
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(xT + px * 4.2, yT + py * 4.2);
-      ctx.lineTo(xT - px * 4.2, yT - py * 4.2);
-      ctx.lineWidth = 2.1;
-      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
       ctx.restore();
       return true;

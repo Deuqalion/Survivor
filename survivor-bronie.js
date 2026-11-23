@@ -1,6 +1,6 @@
 /* ============================================================
    SURVIVOR-BRONIE.JS
-   Wybór broni na początku gry: Łuk, Kostur, Pistolet, Shuriken.
+   Wybór broni na początku gry: Łuk, Kostur, Pistolet, Shuriken, Pająk, Inżynier, Żniwiarz, Łowca.
    Każda broń podmienia:
      - grafikę itemu "bron" (slot 8) i "strzala" (slot 12) — na razie tylko grafiki,
      - zestaw 6 umiejętności pasywnych (nazwy, grafiki kafelków, opisy).
@@ -43,7 +43,7 @@ const UMIEJETNOSCI_KOSTUR = [
   {
     id: "potrojna", nazwa: "Woda", plik: "KOSTURY/woda.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na odepchnięcie wroga.",
-    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund przywołujesz falę wody zadającą <span class="umiej-dmg">${dmgMagiczne([1, 1.15, 1.3, 1.45, 1.6][p])}</span> obrażeń magicznych.`
+    opis: p => `Co <span class="umiej-lvl">${8 - p}</span> sekund przywołujesz rozszerzającą się falę wody. Zadaje ona <span class="umiej-dmg">${dmgMagiczne([1, 1.15, 1.3, 1.45, 1.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "KOSTURY/wampir.png", kol: 1, wiersz: 2,
@@ -75,8 +75,8 @@ const UMIEJETNOSCI_PISTOLET = [
   },
   {
     id: "ognista", nazwa: "Miny", plik: "PISTOLETY/miny.png", kol: 0, wiersz: 2,
-    bonus: "Wszystkie umiejętności mogą krytować za +50% obrażeń.",
-    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sek. kładziesz miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obrażeń magicznych.`
+    bonus: "Umiejętności mogą krytować za 50%.",
+    opis: p => `Co<span class="umiej-lvl">${8 - p}</span>sek. kładziesz wybuchowe miny (max<span class="umiej-lvl">${3 + p}</span>) zadające <span class="umiej-dmg">${dmgMagiczne(1 + p)}</span> obszarowych obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryczny pistolet", plik: "PISTOLETY/wampgun.png", kol: 1, wiersz: 2,
@@ -99,7 +99,7 @@ const UMIEJETNOSCI_SHURIKEN = [
   {
     id: "elektryczna", fizyczne: true, nazwa: "Rykoszet", plik: "SHURIKENY/rykoszet.png", kol: 0, wiersz: 1,
     bonus: "Każde odbicie: +15% obrażeń.",
-    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając <span class="umiej-lvl">50%</span> obrażeń całkowitych.`
+    opis: p => `Ataki odbijają się w kolejnych wrogów w ilości <span class="umiej-lvl">${1 + p}</span> zadając 50% obrażeń całkowitych.`
   },
   {
     id: "magiczna", nazwa: "Bumerang", plik: "SHURIKENY/bumerang.png", kol: 1, wiersz: 1,
@@ -130,7 +130,7 @@ const UMIEJETNOSCI_PAJAK = [
   {
     id: "ognista", nazwa: "Kwasowa chmura", plik: "PAJĄKI/pkwas.png", kol: 1, wiersz: 0,
     bonus: () => `Skażony obszar na 5 s: ${dmgMagiczne(0.35)} co 1 s.`,
-    opis: p => `Co <span class="umiej-lvl">10</span> s plujesz kwasem w skupisko wrogów zadając <span class="umiej-dmg">${dmgMagiczne([0.7, 1, 1.3, 1.6, 1.9][p])}</span> obrażeń magicznych.`
+    opis: p => `Co 10s plujesz kwasem w skupisko wrogów zadając <span class="umiej-dmg">${dmgMagiczne([0.7, 1, 1.3, 1.6, 1.9][p])}</span> obrażeń magicznych.`
   },
   {
     id: "odlamkowa", nazwa: "Ptasznik", plik: "PAJĄKI/pptasznik.png", kol: 0, wiersz: 1,
@@ -161,24 +161,24 @@ const UMIEJETNOSCI_INZYNIER = [
     opis: p => `Rozstawiasz działka (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg">${dmgMagiczne([1, 1.05, 1.1, 1.15, 1.2][p])}</span> obrażeń magicznych.`
   },
   {
-    id: "potrojna", fizyczne: true, nazwa: "Wieżyczki", plik: "INŻYNIERZY/wiezyczka.png", kol: 1, wiersz: 0,
+    id: "potrojna", nazwa: "Wieżyczki", plik: "INŻYNIERZY/wiezyczka.png", kol: 1, wiersz: 0,
     bonus: "2x prędkość strzelania.",
-    opis: p => `Rozstawiasz wieżyczki (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne([0.6, 0.7, 0.8, 0.9, 1][p])}</span> obrażeń fizycznych i redukując pancerz o 8% (max 40%).`
+    opis: p => `Rozstawiasz wieżyczki (max <span class="umiej-lvl">${[1, 1, 2, 2, 3][p]}</span>) strzelające w najbliższego im wroga zadając <span class="umiej-dmg">${dmgMagiczne([0.5, 0.55, 0.6, 0.65, 0.7][p])}</span> obrażeń magicznych.`
   },
   {
     id: "ognista", nazwa: "Kolczatki", plik: "INŻYNIERZY/kolczatka.png", kol: 0, wiersz: 1,
-    bonus: () => `Po zużyciu kolców lub czasu wybuchają za ${dmgMagiczne(1)}.`,
-    opis: p => `Co <span class="umiej-lvl">5</span> s rozstawiasz kolczatki na <span class="umiej-lvl">${[28, 36, 44, 52, 60][p]}</span> s mające <span class="umiej-lvl">${[4, 6, 8, 10, 12][p]}</span> kolców. Każdy zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
+    bonus: () => `Po zużyciu wybuchają za ${dmgMagiczne(1)}.`,
+    opis: p => `Co 5s rozstawiasz kolczatki na <span class="umiej-lvl">${[28, 36, 44, 52, 60][p]}</span>s mające <span class="umiej-lvl">${[4, 6, 8, 10, 12][p]}</span> kolców. Każdy zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "odlamkowa", nazwa: "Gryzaki", plik: "INŻYNIERZY/gryzak.png", kol: 1, wiersz: 1,
-    bonus: "3 gryzaki na raz.",
-    opis: p => `Co <span class="umiej-lvl">10</span> s rozstawiasz gryzaki zadające <span class="umiej-dmg">${dmgMagiczne([1.5, 2, 2.5, 3, 3.5][p])}</span> obrażeń magicznych przez 5 s i spowalniając o 30%. Gryzaki trwają <span class="umiej-lvl">${[10, 15, 20, 25, 30][p]}</span> s.`
+    bonus: "Stawiasz 3 gryzaki na raz.",
+    opis: p => `Co 10s stawiasz na<span class="umiej-lvl">${[10, 15, 20, 25, 30][p]}</span>s gryzaki zadające <span class="umiej-dmg">${dmgMagiczne([1.5, 2, 2.5, 3, 3.5][p])}</span> obrażeń magicznych przez 5s. Spowalniają wroga o 30%.`
   },
   {
     id: "magiczna", nazwa: "Rakiety", plik: "INŻYNIERZY/rakieta.png", kol: 0, wiersz: 2,
     bonus: "33% szansy na wybuch rakiety.",
-    opis: p => `Co <span class="umiej-lvl">10</span> s strzelasz rakietami w ilości <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> w najbliższego wroga. Każda zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
+    opis: p => `Co 10s strzelasz rakietami w ilości <span class="umiej-lvl">${[3, 5, 7, 9, 11][p]}</span> w najbliższego wroga. Każda zadaje <span class="umiej-dmg">${dmgMagiczne([0.52, 0.54, 0.56, 0.58, 0.6][p])}</span> obrażeń magicznych.`
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "INŻYNIERZY/wampir.png", kol: 1, wiersz: 2,
@@ -201,12 +201,12 @@ const UMIEJETNOSCI_ZNIWIARZ = [
   {
     id: "odlamkowa", nazwa: "Ściana bólu", plik: "ŻNIWIARZ/sciana.png", kol: 0, wiersz: 1,
     bonus: "Stawiasz 2 ściany.",
-    opis: p => `Co 15 s stawiasz ścianę na 10 s zadającą <span class="umiej-dmg">${dmgMagiczne(1)}</span> obrażeń magicznych i spowalniającą wrogów o 30% na 5 s. Spowolnieni dostają o 20% więcej obrażeń. Szerokość: <span class="umiej-lvl">${[150, 250, 350, 450, 550][p]}</span>.`
+    opis: p => `Stawiasz ją co 15s, zadaje <span class="umiej-dmg">${dmgMagiczne(1)}</span> obr. spowalnia i zwiększa zadawane obrażenia +20%. Szerokość:<span class="umiej-lvl">${[150, 250, 350, 450, 550][p]}</span>.`
   },
   {
     id: "magiczna", nazwa: "Dusze", plik: "ŻNIWIARZ/dusze.png", kol: 1, wiersz: 1,
     bonus: "Dusze nie zanikają.",
-    opis: p => `Wokół Ciebie krążą zagubione dusze w ilości <span class="umiej-lvl">${[5, 9, 13, 17, 21][p]}</span> zadające <span class="umiej-dmg">${dmgMagiczne([1, 1.25, 1.5, 1.75, 2][p])}</span> obrażeń magicznych. Po trafieniu dusza zanika na 5 s.`
+    opis: p => `Wokół Ciebie krążą dusze w ilości<span class="umiej-lvl">${[5, 9, 13, 17, 21][p]}</span>zadające <span class="umiej-dmg">${dmgMagiczne([1, 1.25, 1.5, 1.75, 2][p])}</span> obrażeń magicznych. Po trafieniu dusza zanika na 5 s.`
   },
   {
     id: "potrojna", nazwa: "Banshee", plik: "ŻNIWIARZ/banshee.png", kol: 0, wiersz: 2,
@@ -215,6 +215,39 @@ const UMIEJETNOSCI_ZNIWIARZ = [
   },
   {
     id: "wampiryczna", nazwa: "Wampiryzm", plik: "ŻNIWIARZ/wampiryzm.png", kol: 1, wiersz: 2,
+    bonus: "Kradzież życia: 5%",
+    opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
+  }
+];
+
+const UMIEJETNOSCI_LOWCA = [
+  {
+    id: "elektryczna", fizyczne: true, nazwa: "Przeszywające bełty", plik: "KUSZE/przeszywajace.png", kol: 0, wiersz: 0,
+    bonus: "Zawsze trafia przeszywająco.",
+    opis: p => `Co 3. trafienie atakiem zadaje dodatkowo <span class="umiej-dmg umiej-dmg-bialy">${dmgFizyczne([0.8, 0.9, 1, 1.1, 1.2][p])}</span> obrażeń fizycznych.`
+  },
+  {
+    id: "ognista", fizyczne: true, nazwa: "Odbijające bełty", plik: "KUSZE/odbijajace.png", kol: 1, wiersz: 0,
+    bonus: "Ataki odbijają się 2 razy.",
+    opis: p => `Ataki odbijają się od ściany zadając <span class="umiej-lvl">${[60, 70, 80, 90, 100][p]}%</span> obrażeń całkowitych.`
+  },
+  {
+    id: "odlamkowa", fizyczne: true, nazwa: "Diamentowe groty", plik: "KUSZE/diamentowe.png", kol: 0, wiersz: 1,
+    bonus: "Zawsze trafiają przeszywająco.",
+    opis: p => `Ataki zadają dodatkowo <span class="umiej-lvl">${plLiczba([4, 5.5, 7, 8.5, 10][p])}%</span> aktualnego zdrowia wroga jako obrażenia fizyczne.`
+  },
+  {
+    id: "magiczna", fizyczne: true, nazwa: "Pogromca olbrzymów", plik: "KUSZE/pogromca.png", kol: 1, wiersz: 1,
+    bonus: "Zawsze trafia przeszywająco.",
+    opis: p => `Co 3. trafienie tego samego wroga zadaje dodatkowo <span class="umiej-lvl">${[6, 7, 8, 9, 10][p]}%</span> jego max PŻ jako obrażenia fizyczne.`
+  },
+  {
+    id: "potrojna", fizyczne: true, nazwa: "Precyzja", plik: "KUSZE/precyzja.png", kol: 0, wiersz: 2,
+    bonus: "Zabicie krytem rozrywa wroga na 5 części.",
+    opis: p => `Kryty dają <span class="umiej-lvl">+${[15, 20, 25, 30, 35][p]}%</span> prędkości ataku na 3 s. Wzmocnienie krytyczne: <span class="umiej-lvl">${plLiczba([15, 17.5, 20, 22.5, 25][p])}%</span>.`
+  },
+  {
+    id: "wampiryczna", nazwa: "Wamp-bełt", plik: "KUSZE/wampbelt.png", kol: 1, wiersz: 2,
     bonus: "Kradzież życia: 5%",
     opis: p => `Otrzymujesz wampiryzm zaklęć, który leczy Cię za <span class="umiej-lvl">${1 + p}%</span> zadanych obrażeń magicznych.`
   }
@@ -309,6 +342,19 @@ const BRONIE = {
   }
 };
 
+BRONIE.lowca = {
+  nazwa: "Kusza", nazwaAmunicji: "Bełty", ikona: "🎯",
+  zakresyBroni: { "Podstawowe obrażenia": { min: 4000, max: 5500 } },
+  bron: "kusza.png", amunicja: "belty.png",
+  umiejetnosci: UMIEJETNOSCI_LOWCA,
+  // Bełty: stały unikalny affix "Zwinność" + (Wartość ataku | Obrażenia umiejętności) + (Prędkość ataku | Szybkość zaklęcia)
+  affixyAmunicji: ["Zwinność"],
+  mozliweAmunicji: AMUNICJA_MOZLIWE,
+  wykluczajaceAmunicji: AMUNICJA_WYKLUCZAJACE,
+  zakresyAmunicji: { "Obrażenia umiejętności": { min: 1, max: 10 } },
+  ulepszenieAmunicji: "Prędkość ataku: +35%"
+};
+
 const ITEM_BRON = 8;   // itemy[8]  = "bron"
 // ITEM_STRZALA (12) pochodzi z config.js
 
@@ -365,7 +411,8 @@ const KLASY_WYBORU = [
   { klasa: "Ninja", bron: "shuriken" },
   { klasa: "Szaman", bron: "pajak" },
   { klasa: "Inżynier", bron: "inzynier" },
-  { klasa: "Żniwiarz", bron: "zniwiarz" }
+  { klasa: "Żniwiarz", bron: "zniwiarz" },
+  { klasa: "Łowca", bron: "lowca" }
 ];
 
 /* Styl samej OKRĄGŁEJ ikony umiejętności "wyciętej" z kafelka: ten sam fragment grafiki co duża
@@ -461,7 +508,8 @@ const MODULY_KLAS = {
   shuriken: ["czyShuriken", "survivor-shuriken.js"],
   pajak: ["czyPajak", "survivor-pajak.js"],
   inzynier: ["czyInzynier", "survivor-inzynier.js"],
-  zniwiarz: ["czyZniwiarz", "survivor-zniwiarz.js"]
+  zniwiarz: ["czyZniwiarz", "survivor-zniwiarz.js"],
+  lowca: ["czyLowca", "survivor-lowca.js"]
 };
 
 function brakujacyModulKlasy(id) {
@@ -505,7 +553,7 @@ function resetujWyborBroni() {
   ostatniaGranaBron = aktualnaBron;
 }
 
-/* Klawisze 1-7 wybierają klasę (kartę), gdy okno jest otwarte. */
+/* Klawisze 1-8 wybierają klasę (kartę), gdy okno jest otwarte. */
 document.addEventListener("keydown", event => {
   if (!wyborBroniOtwarty) return;
   const klasa = KLASY_WYBORU[Number(event.key) - 1];

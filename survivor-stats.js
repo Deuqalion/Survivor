@@ -42,4 +42,24 @@ function renderujStatyGracza() {
         <span class="staty-wartosc">${w.wartosc}</span>
       </div>
     `).join("");
+
+  renderujSercaWskrzeszen();
+}
+
+/* Serca pod tabelą statystyk = liczba dostępnych Wskrzeszeń:
+   darmowe startowe (1) + Wskrzeszenie z ulepszenia Zbroi (jeśli jest), minus już zużyte. */
+function liczbaDostepnychWskrzeszen() {
+  const s = stan[1].staty || {};
+  let n = 0;
+  if (typeof wykorzystaneWskrzeszenieStartowe !== "undefined" && !wykorzystaneWskrzeszenieStartowe) n++;
+  if (s.wskrzeszenieDostepne && typeof wykorzystaneWskrzeszenie !== "undefined" && !wykorzystaneWskrzeszenie) n++;
+  return n;
+}
+
+function renderujSercaWskrzeszen() {
+  const el = document.getElementById("wskrzeszenia-serca");
+  if (!el) return;
+  const n = liczbaDostepnychWskrzeszen();
+  el.textContent = "❤️".repeat(n);
+  el.title = `Dostępne Wskrzeszenia: ${n}`;
 }

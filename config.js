@@ -129,7 +129,6 @@ const itemy = {
       "Obrażenia umiejętności"
     ],
     mozliweAffixy: [
-      "Szansa na krwawienie",
       "Wartość ataku",
       "Szansa na kryta",
       "Szansa na przeszywkę",
@@ -240,7 +239,7 @@ const affixy = [
   { nazwa: "Szansa na otrucie: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
   { nazwa: "Szansa na omdlenie: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
   { nazwa: "Wartość ataku: +500", min: 500, max: 500, suffix: "", ulepszenie: true },
-  { nazwa: "Ulepszenie broni", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "Obrażenia umiejętności: +6%" },
+  { nazwa: "Ulepszenie broni", min: 1, max: 1, suffix: "", ulepszenie: true, tekstTooltip: "Obrażenia umiejętności: +10%" },
   { nazwa: "Kradzież życia: 5%", min: 5, max: 5, suffix: "%", ulepszenie: true },
 
   // Pasywki przedmiotów amunicji (działają jak "Zwykła strzała", tylko dodają inną statystykę;
@@ -248,6 +247,10 @@ const affixy = [
   {
     nazwa: "Czarnoksięstwo", min: 0, max: 6, suffix: "%", pasywka: true,
     opis: "Dodaje {x} Obrażeń umiejętności i Szybkości zaklęcia."
+  },
+  {
+    nazwa: "Zwinność", min: 0, max: 20, suffix: "%", pasywka: true,
+    opis: "Zwiększa Prędkość ataku oraz Prędkość ruchu o {x}."
   },
   {
     nazwa: "Zręczność", min: 0, max: 35, suffix: "%", pasywka: true,

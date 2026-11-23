@@ -52,8 +52,8 @@ const KOSTUR_CZAS_SPOWOLNIENIA_MS = 3000;
 const KOSTUR_WODA_CZAS_BAZA_S = 8;                      // co (8 - poziom) s
 const KOSTUR_PREDKOSC_FALI = 520;
 const KOSTUR_POL_SZEROKOSCI_FALI = 40;
-const KOSTUR_DYSTANS_MAX_SZEROKOSCI_FALI = 540;         // po tylu px fala ma 2x początkową szerokość
-/* Aktualna połowa szerokości fali (rośnie liniowo od 1x do 2x na dystansie 540). */
+const KOSTUR_DYSTANS_MAX_SZEROKOSCI_FALI = 750;         // po tylu px fala ma 2x początkową szerokość
+/* Aktualna połowa szerokości fali (rośnie liniowo od 1x do 2x na dystansie 750). */
 function poloweSzerokosciFali(p) {
   const przebyte = Math.hypot(p.x - p.x0, p.y - p.y0);
   return KOSTUR_POL_SZEROKOSCI_FALI * (1 + Math.min(1, przebyte / KOSTUR_DYSTANS_MAX_SZEROKOSCI_FALI));
